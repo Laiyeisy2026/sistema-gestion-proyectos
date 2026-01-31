@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Editar planificación de Principales</h2>
+
+<form method="post">
+    <p>
+        <strong>Fase:</strong> {{ fase.nombre_fase }}
+    </p>
+
+    <label>Cantidad de operarios</label>
+    <input
+        type="number"
+        name="cantidad_operarios"
+        value="{{ fase.cantidad_operarios }}"
+        min="0"
+        required
+    >
+
+    <br><br>
+
+    <button type="submit" class="btn btn-guardar">Guardar</button>
+    <a href="/operarios" class="btn">Cancelar</a>
+</form>
+
+{% endblock %}

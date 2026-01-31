@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Iniciar sesión</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="login-body">
+
+<div class="login-container">
+
+    <h2>P&B CONSTRUCCIONES S.A.S.</h2>
+
+    <img src="/static/logo.jpeg" class="login-logo">
+
+    <h2>Iniciar sesión</h2>
+
+    <form method="post" action="/login" class="login-form">
+
+        <label>Usuario</label>
+        <input type="text" name="username" required>
+
+        <label>Contraseña</label>
+        <input type="password" name="password" required>
+
+        {% if error %}
+            <div class="login-error">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <button type="submit">Ingresar</button>
+    </form>
+
+</div>
+
+</body>
+</html>

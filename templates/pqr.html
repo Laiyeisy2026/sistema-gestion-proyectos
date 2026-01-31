@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}PQR{% endblock %}
+
+{% block content %}
+
+<div class="pqr-card">
+
+    <!-- HEADER -->
+    <div class="pqr-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>PQR – Peticiones, Quejas y Reclamos</h2>
+
+        <button
+            type="button"
+            class="btn btn-guardar"
+            onclick="togglePQRForm()">
+            ➕ Agregar PQR
+        </button>
+    </div>
+
+    {% set solo_lectura = pqr_editando and pqr_editando.estado == "cerrado" %}
+
+    <!-- FORMULARIO -->
+    <div
+        id="form-pqr-container"
+        style="margin-top:20px; {% if not pqr_editando %}display:none;{% endif %}">
+
+        <form
+            method="post"
+            action="
+            {% if pqr_editando %}
+                /proyectos/{{ proyecto.id }}/pqr/editar/{{ pqr_editando.id }}
+            {% else %}
+                /proyectos/{{ proyecto.id }}/pqr
+            {% endif %}
+            "
+            class="form-pqr">
+
+            <label>Fecha del requerimiento</label>
+            <input
+                type="date"
+                name="fecha_requerimiento"
+                value="{{ pqr_editando.fecha_requerimiento if pqr_editando }}"
+                {% if pqr_editando %}disabled{% endif %}
+                required
+            >
+
+            <label>Problema / Requerimiento</label>
+            <textarea
+                name="problema"
+                rows="4"
+                {% if pqr_editando %}disabled{% endif %}
+                required>{{ pqr_editando.problema if pqr_editando }}</textarea>
+
+            <label>Solución compromiso</label>
+            <textarea
+                name="solucion"
+                rows="4"
+                {% if solo_lectura %}disabled{% endif %}>{{ pqr_editando.solucion if pqr_editando }}</textarea>
+
+            <label>Ubicación</label>
+            <input
+                type="text"
+                name="ubicacion"
+                value="{{ pqr_editando.ubicacion if pqr_editando }}"
+                {% if pqr_editando %}disabled{% endif %}
+                placeholder="Ej: Torre A – Piso 3"
+            >
+
+            <label>Fecha de solución</label>
+            <input
+                type="date"
+                name="fecha_solucion"
+                value="{{ pqr_editando.fecha_solucion if pqr_editando }}"
+                {% if solo_lectura %}disabled{% endif %}
+            >
+
+            {% if not solo_lectura %}
+            <div class="acciones-form">
+                <button type="submit" class="btn btn-guardar">
+                    {% if pqr_editando %}
+                        ✅ Guardar solución
+                    {% else %}
+                        💾 Guardar PQR
+                    {% endif %}
+                </button>
+            </div>
+            {% endif %}
+
+        </form>
+
+    </div>
+
+    <hr style="margin:30px 0;">
+
+    <!-- TABLA -->
+    <h3>📋 PQR Registrados</h3>
+
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Problema</th>
+                <th>Ubicación</th>
+                <th>Estado</th>
+                <th>Fecha solución</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pqr in pqr_list %}
+            <tr>
+                <td>{{ pqr.fecha_requerimiento }}</td>
+                <td>{{ pqr.problema }}</td>
+                <td>{{ pqr.ubicacion or "—" }}</td>
+                <td>
+                    {% if pqr.estado == "cerrado" %}
+                        ✅ Cerrado
+                    {% else %}
+                        ⏳ Abierto
+                    {% endif %}
+                </td>
+                <td>{{ pqr.fecha_solucion or "—" }}</td>
+                <td>
+                    <a
+                        href="/proyectos/{{ proyecto.id }}/pqr/editar/{{ pqr.id }}"
+                        class="btn btn-editar">
+                        {% if pqr.estado == "abierto" %}
+                            ✏️ Editar
+                        {% else %}
+                            👁️ Ver
+                        {% endif %}
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align:center;">
+                    No hay PQR registrados
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+<!-- JS -->
+<script>
+function togglePQRForm() {
+    const form = document.getElementById("form-pqr-container");
+    form.style.display = form.style.display === "none" ? "block" : "none";
+}
+</script>
+
+{% endblock %}

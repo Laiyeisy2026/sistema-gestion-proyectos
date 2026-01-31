@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Actividades</h2>
+
+<hr>
+
+{# =====================================
+   FORMULARIO (NUEVA / EDITAR TAREA)
+   ===================================== #}
+
+{% if tarea_editando %}
+<h3>Editar Actividad</h3>
+<form method="post"
+      action="/proyectos/{{ proyecto.id }}/tareas/editar/{{ tarea_editando.id }}"
+      class="form-tarea">
+{% else %}
+<h3>Nueva Actividad</h3>
+<form method="post"
+      action="/proyectos/{{ proyecto.id }}/tareas/nueva"
+      class="form-tarea">
+{% endif %}
+
+    <label>Nombre</label>
+    <input type="text"
+           name="nombre"
+           value="{{ tarea_editando.nombre if tarea_editando else '' }}"
+           required>
+
+    <label>Tipo</label>
+    <select name="tipo" required>
+        {% for t in ["PRINCIPAL","FASE","ACTIVIDAD","SUBACTIVIDAD"] %}
+        <option value="{{ t }}"
+            {% if tarea_editando and tarea_editando.tipo == t %}selected{% endif %}>
+            {{ t }}
+        </option>
+        {% endfor %}
+    </select>
+
+    <label>Fecha inicio (planificada)</label>
+    <input type="date"
+           name="fecha_inicio"
+           value="{{ tarea_editando.fecha_inicio.strftime('%Y-%m-%d') if tarea_editando and tarea_editando.fecha_inicio else '' }}">
+
+    <label>Fecha fin (planificada)</label>
+    <input type="date"
+           name="fecha_fin"
+           value="{{ tarea_editando.fecha_fin.strftime('%Y-%m-%d') if tarea_editando and tarea_editando.fecha_fin else '' }}">
+
+    {% if tarea_editando %}
+    <hr>
+    <h4>Fechas reales</h4>
+
+    <label>Inicio real</label>
+    <input type="date"
+           name="fecha_inicio_real"
+           value="{{ tarea_editando.fecha_inicio_real.strftime('%Y-%m-%d') if tarea_editando.fecha_inicio_real else '' }}">
+
+    <label>Fin real</label>
+    <input type="date"
+           name="fecha_fin_real"
+           value="{{ tarea_editando.fecha_fin_real.strftime('%Y-%m-%d') if tarea_editando.fecha_fin_real else '' }}">
+    {% endif %}
+
+    <label>% Avance</label>
+    <input type="number"
+           name="porcentaje_completado"
+           min="0"
+           max="100"
+           value="{{ tarea_editando.porcentaje_completado if tarea_editando else 0 }}">
+    
+    <label>Valor total</label>
+    <input type="number"
+           name="valor_total"
+           step="0.01"
+           value="{{ tarea_editando.valor_total if tarea_editando and tarea_editando.valor_total else '' }}">
+
+
+    <div class="acciones-form">
+        <button type="submit" class="btn btn-guardar">💾 Guardar</button>
+
+        <a href="/proyectos/{{ proyecto.id }}/tareas"
+           class="btn btn-cancelar">
+            Cancelar
+        </a>
+    </div>
+
+</form>
+
+<hr>
+
+{# =====================================
+   TABLA DE TAREAS
+   ===================================== #}
+
+<table class="tabla tabla-tareas">
+    <thead>
+    <tr>
+        <th>N°</th>
+        <th>Actividad</th>
+        <th>Fecha inicio</th>
+        <th>Fecha Fin</th>
+        <th>Fin real</th>
+        <th>Días</th>
+        <th>%</th>
+        <th>Tipo</th>
+        <th>Estado</th>
+        <th>Valor total</th>
+        <th>Valor avance</th>
+        <th>Acciones</th>
+    </tr>
+</thead>
+
+    <tbody>
+    {% for item in tareas %}
+    <tr class="
+        {% if item.estado_cumplimiento == 'Cumplida antes del plazo' %}
+            estado-antes
+        {% elif item.estado_cumplimiento == 'Cumplida a tiempo' %}
+            estado-a-tiempo
+        {% elif item.estado_cumplimiento == 'Retrasada' %}
+            estado-retrasada
+        {% elif item.estado_cumplimiento == 'Cumplida fuera de plazo' %}
+            estado-fuera
+        {% elif item.estado_cumplimiento.startswith('En ejecución') %}
+            estado-ejecucion
+        {% else %}
+            estado-sin-plan
+        {% endif %}
+    ">
+
+        <td>{{ item.wbs }}</td>
+
+        <td style="padding-left: {{ (item.tarea.nivel_esquema - 1) * 25 }}px;">
+            {{ item.tarea.nombre }}
+        </td>
+
+        <td>
+            {{ item.tarea.fecha_inicio.date() if item.tarea.fecha_inicio else '' }}
+        </td>
+
+        <td>
+            {{ item.tarea.fecha_fin.date() if item.tarea.fecha_fin else '' }}
+        </td>
+
+        {# 🟢 FECHA FIN REAL CON COMPARACIÓN CORRECTA #}
+        <td>
+        {% if item.tarea.fecha_fin_real and item.tarea.fecha_fin %}
+            {% if item.tarea.fecha_fin_real < item.tarea.fecha_fin.date() %}
+                <span style="color: green;">
+                    {{ item.tarea.fecha_fin_real }}
+                </span>
+            {% elif item.tarea.fecha_fin_real > item.tarea.fecha_fin.date() %}
+                <span style="color: red;">
+                    {{ item.tarea.fecha_fin_real }}
+                </span>
+            {% else %}
+                <span style="color: orange;">
+                    {{ item.tarea.fecha_fin_real }}
+                </span>
+            {% endif %}
+        {% elif item.tarea.fecha_fin_real %}
+            {{ item.tarea.fecha_fin_real }}
+        {% else %}
+            —
+        {% endif %}
+        </td>
+        <td>
+    {% if item.variacion_dias is not none %}
+        {% if item.variacion_dias < 0 %}
+            <span style="color: green;">
+                {{ item.variacion_dias }} días
+            </span>
+        {% elif item.variacion_dias > 0 %}
+            <span style="color: red;">
+                +{{ item.variacion_dias }} días
+            </span>
+        {% else %}
+            <span style="color: orange;">
+                0 días
+            </span>
+        {% endif %}
+    {% else %}
+        —
+    {% endif %}
+</td>
+        <td>{{ item.tarea.porcentaje_completado or 0 }}</td>
+        <td>{{ item.tarea.tipo }}</td>
+        <td><strong>{{ item.estado_cumplimiento }}</strong></td>
+        <td>{{ item.tarea.valor_total | moneda }}</td>
+        <td>{{ item.valor_avance | moneda }}</td>
+
+        <td class="acciones acciones-vertical">
+    <a href="/proyectos/{{ proyecto.id }}/tareas/editar/{{ item.tarea.id }}"
+       class="btn btn-editar">
+        ✏️ Editar
+    </a>
+
+    <a href="/proyectos/{{ proyecto.id }}/tareas/eliminar/{{ item.tarea.id }}"
+       class="btn btn-eliminar"
+       onclick="return confirm('¿Eliminar tarea?');">
+        🗑 Eliminar
+    </a>
+</td>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

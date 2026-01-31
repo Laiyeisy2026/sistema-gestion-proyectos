@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Asignaciones{% endblock %}
+
+{% block content %}
+
+<div class="pqr-card" style="max-width: 1200px;">
+
+    <!-- HEADER -->
+    <div class="pqr-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Asignaciones por Operarios</h2>
+    </div>
+
+    <hr style="margin:20px 0;">
+
+    <!-- TABLA -->
+    <table class="tabla" style="table-layout: fixed; width: 100%;">
+        <thead>
+            <tr>
+                <th style="width: 5%;">N°</th>
+                <th style="width: 12%;">Operario</th>
+                <th style="width: 45%;">Tarea</th>
+                <th style="width: 8%;">Días</th>
+                <th style="width: 10%;">Estado</th>
+                <th style="width: 20%;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+
+        {% for f in filas %}
+        <tr>
+            <td>{{ loop.index }}</td>
+
+            <td>Operario {{ loop.index }}</td>
+
+            <!-- COLUMNA TAREA MÁS ANCHA Y AMABLE -->
+            <td style="white-space: normal; word-break: break-word;">
+                <strong>{{ f.principal }}</strong>
+                {% if f.actividad %}
+                    <br>
+                    <span style="color:#555; font-style:italic;">
+                        → {{ f.actividad }}
+                    </span>
+                {% endif %}
+            </td>
+
+            <td>{{ f.horas or "—" }}</td>
+
+            <td>
+                {% if f.estado == "libre" %}
+                    🟢 Libre
+                {% else %}
+                    🔵 Ocupado
+                {% endif %}
+            </td>
+
+            <td class="acciones">
+                {% if f.estado == "libre" %}
+                    <a
+                        href="/proyectos/{{ proyecto.id }}/asignaciones/asignar/{{ f.id }}"
+                        class="btn btn-editar">
+                        ➕ Asignar
+                    </a>
+                {% else %}
+                    <a
+                        href="/proyectos/{{ proyecto.id }}/asignaciones/asignar/{{ f.id }}"
+                        class="btn btn-editar">
+                        ✏️ Editar
+                    </a>
+
+                    <a
+                        href="/proyectos/{{ proyecto.id }}/asignaciones/liberar/{{ f.id }}"
+                        class="btn btn-eliminar"
+                        onclick="return confirm('¿Liberar este operario?');">
+                        🗑 Liberar
+                    </a>
+                {% endif %}
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="6" style="text-align:center;">
+                No hay asignaciones registradas
+            </td>
+        </tr>
+        {% endfor %}
+
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}

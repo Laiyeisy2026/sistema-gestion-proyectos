@@ -1,0 +1,790 @@
+/* =====================================================
+   ESTILO GENERAL
+   ===================================================== */
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background-color: #f4f6f8;
+    color: #333;
+}
+
+/* =====================================================
+   CONTENEDOR PRINCIPAL
+   ===================================================== */
+
+.container {
+    padding: 20px;
+    max-width: 1400px;       /* ⬅️ clave para evitar corrimientos */
+    margin: 0 auto;
+}
+
+/* =====================================================
+   NAVBAR
+   ===================================================== */
+
+.navbar {
+    height: 80px;
+    background-color: #0C0A09;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 25px;
+}
+
+.navbar a {
+    color: white;
+    margin-right: 20px;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.navbar a:hover {
+    text-decoration: underline;
+}
+
+/* IZQUIERDA */
+.nav-left {
+    flex: 1;
+    text-align: center;
+}
+
+.nav-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #FFDF20;
+}
+
+/* DERECHA */
+.nav-right {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.logo {
+    height: 55px;
+}
+
+.user-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.12);
+    padding: 5px 12px;
+    border-radius: 14px;
+}
+
+.user-name {
+    color: white;
+    font-size: 13px;
+}
+
+.btn-logout {
+    background: #d9534f;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.btn-logout:hover {
+    background: #c9302c;
+}
+
+/* =====================================================
+   TABLAS
+   ===================================================== */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-size: 14px;
+}
+
+th {
+    background-color: #f2f3f5;
+    padding: 10px;
+    border: 1px solid #ddd;
+    font-weight: 600;
+    text-align: left;
+}
+
+td {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    vertical-align: middle;
+}
+
+table tr:hover {
+    background-color: #eef4ff;
+}
+
+/* ⬅️ SOLUCIÓN A TABLAS GRANDES */
+.tabla-scroll {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* =====================================================
+   FORMULARIOS
+   ===================================================== */
+
+.form-tarea label {
+    display: block;
+    margin-top: 10px;
+    font-weight: 600;
+}
+
+.form-tarea input,
+.form-tarea select {
+    width: 100%;
+    padding: 6px 8px;
+    margin-top: 4px;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.acciones-form {
+    margin-top: 15px;
+}
+
+/* =====================================================
+   BOTONES
+   ===================================================== */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-editar {
+    background-color: #e3f2fd;
+    color: #0d47a1;
+    border-color: #bbdefb;
+}
+
+.btn-editar:hover {
+    background-color: #d0e7fa;
+}
+
+.btn-eliminar {
+    background-color: #f5f5f5;
+    color: #8a1c1c;
+    border-color: #e0e0e0;
+}
+
+.btn-eliminar:hover {
+    background-color: #fbeaea;
+}
+
+.btn-guardar {
+    background-color: #2e7d32;
+    color: white;
+    border-color: #1b5e20;
+}
+
+.btn-guardar:hover {
+    background-color: #256628;
+}
+
+.btn-cancelar {
+    background-color: #eeeeee;
+    color: #424242;
+    border-color: #bdbdbd;
+}
+
+.btn-cancelar:hover {
+    background-color: #e0e0e0;
+}
+
+td.acciones {
+    white-space: nowrap;
+}
+
+/* =====================================================
+   TABLA TAREAS (COMPACTA)
+   ===================================================== */
+
+.tabla-tareas {
+    font-size: 13px;
+}
+
+.tabla-tareas th,
+.tabla-tareas td {
+    font-size: 12.5px;
+    padding: 6px 8px;
+    word-break: break-word;
+    white-space: normal;
+}
+
+/* =====================================================
+   SEMÁFORO DE ESTADOS
+   ===================================================== */
+
+.estado-sin-plan td { background-color: #eeeeee !important; }
+.estado-ejecucion td { background-color: #fff8e1 !important; }
+.estado-a-tiempo td { background-color: #e8f5e9 !important; }
+.estado-antes td { background-color: #c8e6c9 !important; }
+.estado-retrasada td { background-color: #fdecea !important; }
+.estado-fuera td { background-color: #f8d7da !important; }
+
+/* =====================================================
+   PROYECTOS – GRID
+   ===================================================== */
+
+.proyectos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px;
+    margin-top: 30px;
+}
+
+.proyecto-card {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    padding: 20px;
+    position: relative;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.proyecto-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 35px rgba(0,0,0,0.12);
+}
+
+.proyecto-card img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 15px;
+}
+
+.proyecto-card-header {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+}
+
+/* =====================================================
+   PQR / CARDS
+   ===================================================== */
+
+.pqr-card {
+    max-width: 700px;
+    margin: 40px auto;
+    background: #ffffff;
+    padding: 30px 35px;
+    border-radius: 14px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.info-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #ddd;
+}
+.btn-entrar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 10px 20px;
+    border-radius: 12px;
+
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white;
+
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-entrar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.45);
+}
+
+.btn-editar-proyecto {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 36px;
+    height: 36px;
+
+    background: white;
+    border-radius: 50%;
+    border: none;
+
+    font-size: 15px;
+    text-decoration: none;
+
+    box-shadow: 0 6px 14px rgba(0,0,0,0.2);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-editar-proyecto:hover {
+    transform: scale(1.1);
+    box-shadow: 0 10px 22px rgba(0,0,0,0.3);
+}
+
+/* =========================
+   BOTÓN NUEVO PROYECTO – FIX
+   ========================= */
+
+.btn-nuevo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    margin-top: 25px;
+
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+
+    background-color: #16a34a;
+    color: #ffffff;
+
+    border-radius: 10px;
+    border: none;
+
+    text-decoration: none;
+    cursor: pointer;
+
+    box-shadow: 0 6px 14px rgba(22, 163, 74, 0.25);
+
+    transition: background-color 0.2s ease,
+                transform 0.15s ease,
+                box-shadow 0.2s ease;
+}
+
+.btn-nuevo:hover {
+    background-color: #15803d;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(22, 163, 74, 0.35);
+}
+
+.btn-nuevo:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 10px rgba(22, 163, 74, 0.25);
+}
+
+/* =========================
+   AJUSTES TABLA TAREAS
+   ========================= */
+
+/* TABLA MÁS AMPLIA */
+.tabla-tareas {
+    table-layout: fixed;     /* CLAVE */
+    width: 100%;
+}
+
+/* =========================
+   COLUMNA N° (WBS)
+   ========================= */
+.tabla-tareas th:nth-child(1),
+.tabla-tareas td:nth-child(1) {
+    width: 50px;             /* más ancha */
+    text-align: center;
+    white-space: nowrap;     /* 1.1.1.1 en una sola línea */
+    font-weight: 600;
+}
+
+/* COLUMNA ACTIVIDAD – DEFINITIVO */
+.tabla-tareas th:nth-child(2),
+.tabla-tareas td:nth-child(2) {
+    width: 42%;              /* ⬅️ ahora sí protagonista */
+    font-size: 12px;         /* cómoda, profesional */
+    line-height: 1.45;
+}
+
+/* =========================
+   FECHAS (inicio / fin / real)
+   ========================= */
+.tabla-tareas th:nth-child(3),
+.tabla-tareas th:nth-child(4),
+.tabla-tareas th:nth-child(5),
+.tabla-tareas td:nth-child(3),
+.tabla-tareas td:nth-child(4),
+.tabla-tareas td:nth-child(5) {
+    width: 80px;
+    font-size: 11px;
+    text-align: center;
+    white-space: nowrap;     /* evita quiebres feos */
+}
+
+/* =========================
+   DÍAS
+   ========================= */
+.tabla-tareas th:nth-child(6),
+.tabla-tareas td:nth-child(6) {
+    width: 50px;
+    text-align: center;
+    font-size: 11.5px;
+}
+
+/* =========================
+   %
+   ========================= */
+.tabla-tareas th:nth-child(7),
+.tabla-tareas td:nth-child(7) {
+    width: 55px;
+    text-align: center;
+    font-size: 11.5px;
+}
+
+/* =========================
+   TIPO (MUY IMPORTANTE)
+   ========================= */
+.tabla-tareas th:nth-child(8),
+.tabla-tareas td:nth-child(8) {
+    width: 110px;            /* ⬅️ aquí se arregla */
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* =========================
+   ESTADO
+   ========================= */
+.tabla-tareas th:nth-child(9),
+.tabla-tareas td:nth-child(9) {
+    width: 100px;
+    font-size: 11px;
+    text-align: center;
+}
+
+/* =========================
+   VALORES
+   ========================= */
+.tabla-tareas th:nth-child(10),
+.tabla-tareas th:nth-child(11),
+.tabla-tareas td:nth-child(10),
+.tabla-tareas td:nth-child(11) {
+    width: 90px;
+    text-align: right;
+    font-size: 12px;
+}
+
+/* =========================
+   ACCIONES
+   ========================= */
+.tabla-tareas th:nth-child(12),
+.tabla-tareas td:nth-child(12) {
+    width: 140px;
+    white-space: nowrap;
+    text-align: center;
+}
+
+/* VALORES – MÁS COMPACTOS */
+.tabla-tareas th:nth-child(10),
+.tabla-tareas td:nth-child(10),
+.tabla-tareas th:nth-child(11),
+.tabla-tareas td:nth-child(11) {
+    width: 7%;
+    font-size: 11px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* ACCIONES EN VERTICAL – CENTRADAS */
+.acciones-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;      /* ⬅️ CENTRADO */
+    justify-content: center;
+    text-align: center;
+}
+
+.acciones-vertical .btn {
+    width: 90px;              /* ⬅️ todos iguales */
+    justify-content: center;
+}
+
+/* =========================
+   PQR – FORMULARIO MEJORADO
+   ========================= */
+
+.pqr-card {
+    max-width: 900px;              /* más ancho que antes */
+    margin: 40px auto;
+    background: #ffffff;
+    padding: 30px 40px;
+    border-radius: 16px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+}
+
+/* HEADER */
+.pqr-header h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: #222;
+}
+
+/* FORMULARIO */
+.form-pqr {
+    display: grid;
+    grid-template-columns: 1fr 1fr;   /* dos columnas */
+    gap: 18px 24px;
+    margin-top: 20px;
+}
+
+/* Campos que deben ocupar todo el ancho */
+.form-pqr textarea,
+.form-pqr .full-width {
+    grid-column: 1 / -1;
+}
+
+/* Labels */
+.form-pqr label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #444;
+    font-size: 14px;
+}
+
+/* Inputs y textareas */
+.form-pqr input,
+.form-pqr textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-pqr input:focus,
+.form-pqr textarea:focus {
+    outline: none;
+    border-color: #2e7d32;
+    box-shadow: 0 0 0 2px rgba(46,125,50,0.15);
+}
+
+/* Textareas */
+.form-pqr textarea {
+    resize: vertical;
+    min-height: 90px;
+}
+
+/* ACCIONES */
+.form-pqr .acciones-form {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+/* BOTÓN AGREGAR PQR (header) */
+.pqr-header .btn-guardar {
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 10px;
+}
+
+/* TABLA PQR */
+.pqr-card table {
+    margin-top: 15px;
+}
+
+.pqr-card th {
+    font-size: 13px;
+}
+
+.pqr-card td {
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+/* =========================
+   LOGIN – VISTA PROFESIONAL
+   ========================= */
+
+.login-body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0c0a09, #1f1f1f);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-container {
+    background: white;
+    padding: 40px 45px;
+    border-radius: 18px;
+    width: 380px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.35);
+    text-align: center;
+}
+
+.login-logo {
+    width: 140px;
+    margin-bottom: 20px;
+}
+
+.login-container h2 {
+    margin-bottom: 25px;
+    color: #222;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.login-form label {
+    text-align: left;
+    font-size: 14px;
+    font-weight: 600;
+    color: #444;
+}
+
+.login-form input {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+.login-form input:focus {
+    outline: none;
+    border-color: #000;
+}
+
+.login-form button {
+    margin-top: 18px;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: #000;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.login-form button:hover {
+    background: #333;
+}
+
+.login-error {
+    background: #ffe0e0;
+    color: #b00000;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 15px;
+}
+
+/* =========================
+   LOGIN
+   ========================= */
+
+.login-body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f0f0f, #1c1c1c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Arial, sans-serif;
+}
+
+.login-container {
+    background: white;
+    padding: 35px 40px;
+    border-radius: 16px;
+    width: 360px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+    text-align: center;
+}
+
+.login-logo {
+    width: 120px;
+    margin-bottom: 15px;
+}
+
+.login-container h2 {
+    margin-bottom: 25px;
+    color: #222;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.login-form label {
+    text-align: left;
+    font-size: 14px;
+    color: #555;
+}
+
+.login-form input {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+.login-form input:focus {
+    outline: none;
+    border-color: #000;
+}
+
+.login-form button {
+    margin-top: 15px;
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: black;
+    color: white;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+.login-form button:hover {
+    background: #333;
+}
+
+.login-error {
+    background: #ffe0e0;
+    color: #b00000;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-top: 5px;
+}

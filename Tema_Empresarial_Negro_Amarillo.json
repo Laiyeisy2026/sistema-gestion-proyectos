@@ -1,0 +1,14 @@
+{
+  "name": "Corporativo Negro Final",
+  "dataColors": [
+    "#F2C94C",
+    "#8E8E8E",
+    "#2F80ED",
+    "#1F7A6B",
+    "#C0392B",
+    "#BDBDBD"
+  ],
+  "background": "#121212",
+  "foreground": "#E0E0E0",
+  "tableAccent": "#F2C94C"
+}

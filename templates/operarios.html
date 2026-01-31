@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Operarios{% endblock %}
+
+{% block content %}
+
+<div class="pqr-card" style="max-width: 1200px;">
+
+    <!-- HEADER -->
+    <div class="pqr-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>Operarios por Actividades Principales</h2>
+    </div>
+
+    <hr style="margin:20px 0;">
+
+    <!-- FORMULARIO -->
+    <form
+        method="post"
+        action="/proyectos/{{ proyecto.id }}/operarios/principal"
+        style="display:flex; gap:15px; align-items:end; flex-wrap:wrap; margin-bottom:25px;">
+
+        <div>
+            <label style="display:block; margin-bottom:5px;">Actividad principal</label>
+            <select name="tarea_id" required>
+                {% for p in principales %}
+                    <option value="{{ p.id }}">{{ p.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label style="display:block; margin-bottom:5px;">Operarios requeridos</label>
+            <input type="number" name="cantidad" required min="1">
+        </div>
+
+        <div>
+            <button type="submit" class="btn btn-guardar">
+                💾 Guardar
+            </button>
+        </div>
+
+    </form>
+
+    <hr style="margin:20px 0;">
+
+    <!-- TABLA -->
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th style="width:60%;">Actividad Principal</th>
+                <th style="width:20%;">Operarios requeridos</th>
+                <th style="width:20%;">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fase in fases %}
+            <tr>
+                <td style="white-space:normal; word-break:break-word;">
+                    <strong>{{ fase.nombre_fase }}</strong>
+                </td>
+                <td>{{ fase.cantidad_operarios }}</td>
+                <td class="acciones">
+                    <a
+                        href="/proyectos/{{ proyecto.id }}/operarios/fase/editar/{{ fase.id }}"
+                        class="btn btn-editar">
+                        ✏️ Editar
+                    </a>
+
+                    <a
+                        href="/proyectos/{{ proyecto.id }}/operarios/fase/eliminar/{{ fase.id }}"
+                        class="btn btn-eliminar"
+                        onclick="return confirm('¿Eliminar esta planificación?');">
+                        🗑 Eliminar
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3" style="text-align:center;">
+                    No hay actividades planificadas
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}

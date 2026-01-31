@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Asignar actividad</h2>
+
+<p>
+    <strong>Actividad principal:</strong> {{ principal.nombre }}
+</p>
+
+<form method="post">
+    <div>
+        <label>Actividad / Fase / Subactividad</label>
+        <select name="tarea_id" required>
+            <option value="">-- Seleccione --</option>
+            {% for t in tareas %}
+                <option value="{{ t.id }}">
+                    {% if t.tipo == "FASE" %}
+                        ▸ {{ t.nombre }}
+                    {% elif t.tipo == "ACTIVIDAD" %}
+                        &nbsp;&nbsp;– {{ t.nombre }}
+                    {% elif t.tipo == "SUBACTIVIDAD" %}
+                        &nbsp;&nbsp;&nbsp;&nbsp;• {{ t.nombre }}
+                    {% endif %}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <br>
+
+    <div>
+        <label>Horas</label>
+        <input type="number" name="horas_asignadas" step="0.5" min="0" required>
+    </div>
+
+    <br>
+
+    <button type="submit" class="btn btn-guardar">💾 Guardar</button>
+</form>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>
+    {% if operario %}
+        Editar Operario
+    {% else %}
+        Nuevo Operario
+    {% endif %}
+</h2>
+
+<form method="post">
+    <label>Nombre</label><br>
+    <input type="text" name="nombre"
+           value="{{ operario.nombre if operario else '' }}"
+           required><br><br>
+
+    <label>Actividad</label><br>
+    <input type="text" name="actividad"
+           value="{{ operario.actividad if operario else '' }}"
+           required><br><br>
+
+    <button type="submit">
+        {% if operario %}Guardar cambios{% else %}Crear operario{% endif %}
+    </button>
+
+    <a href="/operarios">Cancelar</a>
+</form>
+
+{% endblock %}

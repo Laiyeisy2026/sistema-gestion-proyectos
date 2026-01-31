@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}P&B CONSTRUCCIONES S.A.S.{% endblock %}</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<nav class="navbar">
+    <div class="nav-left">
+
+        {% if proyecto %}
+            <!-- ⬅️ VOLVER A PROYECTOS (NUEVO, NO ROMPE NADA) -->
+            <a href="/" class="btn-volver">⬅ Proyectos</a>
+
+            <!-- 🟢 MENÚ CUANDO ESTÁS DENTRO DE UN PROYECTO -->
+             <a href="/proyectos/{{ proyecto.id }}">Informe</a>
+            <a href="/proyectos/{{ proyecto.id }}/informacion">Información general</a>
+            <a href="/proyectos/{{ proyecto.id }}/tareas">Actividades</a>
+            <a href="/proyectos/{{ proyecto.id }}/operarios">Operarios</a>
+            <a href="/proyectos/{{ proyecto.id }}/asignaciones">Asignaciones</a>
+            <a href="/proyectos/{{ proyecto.id }}/pqr">PQR</a>
+
+
+        {% else %}
+            <!-- 🔵 SOLO EN LA PÁGINA PRINCIPAL -->
+            <span class="nav-title">P&B CONSTRUCCIONES S.A.S.</span>
+        {% endif %}
+
+    </div>
+
+    <div class="nav-right">
+    <img src="/static/logo.jpeg" class="logo">
+
+    {% if request.session.get("user") %}
+        <div class="user-box">
+            <span class="user-name">👤 {{ request.session.get("user") }}</span>
+            <a href="/logout" class="btn-logout">Cerrar sesión</a>
+        </div>
+    {% endif %}
+</div>
+</nav>
+
+<div class="container">
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>

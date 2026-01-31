@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Proyectos</h2>
+
+<a href="/proyectos/nuevo" class="btn btn-nuevo">➕ Nuevo proyecto</a>
+
+<p>Seleccionar un proyecto para ingresar</p>
+
+<div class="proyectos-grid">
+
+    {% for proyecto in proyectos %}
+    <div class="proyecto-card">
+
+        <!-- BOTÓN EDITAR -->
+        <div class="proyecto-card-header">
+            <a href="/proyectos/editar/{{ proyecto.id }}" class="btn-editar-proyecto">
+                ✏️
+            </a>
+        </div>
+
+        {% if proyecto.imagen %}
+            <img src="{{ proyecto.imagen }}" class="mazuren">
+        {% else %}
+            <img src="/static/mazuren.jpeg" class="mazuren">
+        {% endif %}
+
+        <h3>{{ proyecto.nombre }}</h3>
+        <p>{{ proyecto.descripcion }}</p>
+
+        <a href="/proyectos/{{ proyecto.id }}" class="btn btn-entrar">
+            🚀 Entrar
+        </a>
+
+    </div>
+    {% endfor %}
+
+</div>
+
+{% endblock %}

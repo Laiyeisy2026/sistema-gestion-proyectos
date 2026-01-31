@@ -1,0 +1,517 @@
+{% extends "base.html" %}
+{% block title %}Información General{% endblock %}
+
+{% block content %}
+
+<div class="pqr-card" style="max-width:1100px;">
+
+    <h2>Información General del Proyecto</h2>
+    <hr style="margin:20px 0;">
+
+    <!-- ========================= -->
+    <!-- 📄 CONTRATO -->
+    <!-- ========================= -->
+    <div class="pqr-card" style="margin-bottom:30px;">
+
+        <h4>📄 Contrato</h4>
+
+        {% if proyecto.fecha_firma_contrato or proyecto.contrato_archivo %}
+
+            <!-- 🔒 MODO LECTURA -->
+            <div style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
+
+                <div>
+                    <strong>Fecha de firma:</strong>
+                    {{ proyecto.fecha_firma_contrato or "—" }}
+                </div>
+                <div>
+    <strong>Duración del contrato:</strong>
+    {% if proyecto.duracion_contrato_dias %}
+        {{ proyecto.duracion_contrato_dias }} días
+    {% else %}
+        —
+    {% endif %}
+</div>
+
+                {% if proyecto.contrato_archivo %}
+                <div
+                    style="
+                        padding:10px 15px;
+                        background:#f8f9fa;
+                        border-radius:6px;
+                        display:flex;
+                        align-items:center;
+                        gap:10px;
+                        width:fit-content;
+                    ">
+                    <span>📄 Contrato:</span>
+                    <a
+                        href="{{ proyecto.contrato_archivo }}"
+                        target="_blank"
+                        style="
+                            background:#eef2ff;
+                            color:#1e3a8a;
+                            padding:5px 10px;
+                            border-radius:5px;
+                            text-decoration:none;
+                            font-weight:500;
+                        ">
+                        Ver documento
+                    </a>
+                </div>
+                {% endif %}
+
+                <button
+                    class="btn btn-editar"
+                    style="width:fit-content;"
+                    onclick="mostrarEdicionContrato()">
+                    ✏️ Editar contrato
+                </button>
+            </div>
+
+        {% endif %}
+
+        <!-- ✏️ FORMULARIO (OCULTO SI YA EXISTE) -->
+        <form
+            id="form-contrato"
+            method="post"
+            action="/proyectos/{{ proyecto.id }}/informacion/contrato"
+            enctype="multipart/form-data"
+            style="
+                margin-top:20px;
+                display:{% if proyecto.fecha_firma_contrato or proyecto.contrato_archivo %}none{% else %}flex{% endif %};
+                flex-direction:column;
+                gap:15px;
+            ">
+
+            <div style="max-width:300px;">
+                <label>Fecha de firma del contrato</label>
+                <input
+                    type="date"
+                    name="fecha_firma_contrato"
+                    value="{{ proyecto.fecha_firma_contrato or '' }}">
+            </div>
+
+            <div style="max-width:300px;">
+    <label>Duración del contrato (días)</label>
+    <input
+        type="number"
+        name="duracion_contrato_dias"
+        min="1"
+        value="{{ proyecto.duracion_contrato_dias or '' }}">
+</div>
+
+            <div>
+                <label>Archivo del contrato</label>
+                <input type="file" name="contrato_archivo">
+            </div>
+
+            <button type="submit" class="btn btn-guardar" style="width:fit-content;">
+                💾 Guardar contrato
+            </button>
+        </form>
+
+    </div>
+
+    <!-- ========================= -->
+    <!-- 📑 ACTA DE INICIO -->
+    <!-- ========================= -->
+    <div class="pqr-card" style="margin-bottom:30px;">
+
+        <h4>📑 Acta de inicio</h4>
+
+        {% if proyecto.fecha_acta_inicio or proyecto.acta_inicio_archivo %}
+
+        <!-- 🔒 MODO LECTURA -->
+        <div style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
+
+            <div>
+                <strong>Fecha de firma del acta:</strong>
+                {{ proyecto.fecha_acta_inicio or "—" }}
+            </div>
+
+            {% if proyecto.acta_inicio_archivo %}
+            <div
+                style="
+                    padding:10px 15px;
+                    background:#f8f9fa;
+                    border-radius:6px;
+                    display:flex;
+                    align-items:center;
+                    gap:10px;
+                    width:fit-content;
+                ">
+                <span>📑 Acta:</span>
+                <a
+                    href="{{ proyecto.acta_inicio_archivo }}"
+                    target="_blank"
+                    style="
+                        background:#eef2ff;
+                        color:#1e3a8a;
+                        padding:5px 10px;
+                        border-radius:5px;
+                        text-decoration:none;
+                        font-weight:500;
+                    ">
+                    Ver documento
+                </a>
+            </div>
+            {% endif %}
+
+            <button
+                class="btn btn-editar"
+                style="width:fit-content;"
+                onclick="mostrarEdicionActa()">
+                ✏️ Editar acta de inicio
+            </button>
+        </div>
+
+        {% endif %}
+
+        <!-- ✏️ FORMULARIO ACTA -->
+        <form
+            id="form-acta"
+            method="post"
+            action="/proyectos/{{ proyecto.id }}/informacion/acta-inicio"
+            enctype="multipart/form-data"
+            style="
+                margin-top:20px;
+                display:{% if proyecto.fecha_acta_inicio or proyecto.acta_inicio_archivo %}none{% else %}flex{% endif %};
+                flex-direction:column;
+                gap:15px;
+            ">
+
+            <div style="max-width:300px;">
+                <label>Fecha de firma del acta</label>
+                <input type="date" name="fecha_acta_inicio"
+                       value="{{ proyecto.fecha_acta_inicio or '' }}">
+            </div>
+
+            <div>
+                <label>Archivo del acta de inicio</label>
+                <input type="file" name="acta_inicio_archivo">
+            </div>
+
+            <button type="submit" class="btn btn-guardar" style="width:fit-content;">
+                💾 Guardar acta de inicio
+            </button>
+        </form>
+    </div>
+
+    <!-- ========================= -->
+    <!-- 💰 ANTICIPOS -->
+    <!-- ========================= -->
+    <div class="pqr-card" style="margin-bottom:30px;">
+        <h4>💰 Anticipos</h4>
+
+        <form
+            method="post"
+            action="/proyectos/{{ proyecto.id }}/documentos/nuevo"
+            enctype="multipart/form-data"
+            style="display:flex; gap:20px; flex-wrap:wrap;">
+
+            <input type="hidden" name="tipo" value="anticipo">
+
+            <div>
+                <label>Fecha del anticipo</label>
+                <input type="date" name="fecha" required>
+            </div>
+
+            <div>
+                <label>Valor del anticipo</label>
+                <input type="number" step="0.01" name="valor" required>
+            </div>
+
+            <div style="width:100%;">
+                <label>Soporte del anticipo</label>
+                <input type="file" name="archivo" required>
+            </div>
+
+            <button type="submit" class="btn btn-guardar">
+                ➕ Agregar anticipo
+            </button>
+        </form>
+
+        <table class="tabla" style="margin-top:15px;">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Valor</th>
+                    <th>Soporte</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in documentos if d.tipo == 'anticipo' %}
+                <tr>
+                    <td>{{ d.fecha }}</td>
+                    <td>{{ d.valor | moneda }}</td>
+                    <td><a href="{{ d.archivo }}" target="_blank">📄 Ver</a></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" style="text-align:center;">No hay anticipos registrados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ========================= -->
+    <!-- 🛡 PÓLIZAS -->
+    <!-- ========================= -->
+    <div class="pqr-card" style="margin-bottom:30px;">
+        <h4>🛡 Pólizas</h4>
+
+        <form
+            method="post"
+            action="/proyectos/{{ proyecto.id }}/polizas/nueva"
+            enctype="multipart/form-data"
+            style="display:flex; gap:20px; flex-wrap:wrap;">
+
+            <div>
+                <label>Tipo de póliza</label>
+                <input type="text" name="tipo_poliza" required>
+            </div>
+
+            <div>
+                <label>Aseguradora</label>
+                <input type="text" name="aseguradora">
+            </div>
+
+            <div>
+                <label>Inicio de vigencia</label>
+                <input type="date" name="fecha_inicio" required>
+            </div>
+
+            <div>
+                <label>Fin de vigencia</label>
+                <input type="date" name="fecha_fin" required>
+            </div>
+
+            <div style="width:100%;">
+                <label>Archivo de la póliza</label>
+                <input type="file" name="archivo" required>
+            </div>
+
+            <button class="btn btn-guardar">➕ Agregar póliza</button>
+        </form>
+
+        <table class="tabla" style="margin-top:15px;">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Aseguradora</th>
+                    <th>Vigencia</th>
+                    <th>Estado</th>
+                    <th>Archivo</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in polizas %}
+                <tr>
+                    <td>{{ p.tipo_poliza }}</td>
+                    <td>{{ p.aseguradora or "—" }}</td>
+                    <td>{{ p.fecha_inicio }} → {{ p.fecha_fin }}</td>
+                    <td style="text-align:center; font-weight:500;">
+    {% set estado = p.fecha_fin | estado_poliza %}
+
+    {% if estado == "verde" %}
+        <span title="Póliza vigente">🟢 Vigente</span>
+
+    {% elif estado == "amarillo" %}
+        <span title="La póliza vence pronto">🟡 Por vencer</span>
+
+    {% elif estado == "rojo" %}
+        <span title="La póliza está vencida">🔴 Vencida</span>
+
+    {% else %}
+        <span title="Sin fecha de vencimiento">⚪ Sin definir</span>
+    {% endif %}
+</td>
+                    <td><a href="{{ p.archivo }}" target="_blank">📄 Ver</a></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align:center;">No hay pólizas registradas</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ========================= -->
+    <!-- ✂️ CORTES -->
+    <!-- ========================= -->
+    <div class="pqr-card">
+        <h4>✂️ Cortes</h4>
+
+        <form
+            method="post"
+            action="/proyectos/{{ proyecto.id }}/documentos/nuevo"
+            enctype="multipart/form-data"
+            style="display:flex; gap:20px; flex-wrap:wrap;">
+
+            <input type="hidden" name="tipo" value="corte">
+
+            <div>
+                <label>Fecha de realización</label>
+                <input type="date" name="fecha" required>
+            </div>
+
+            <div style="width:100%;">
+                <label>Documento del corte</label>
+                <input type="file" name="archivo" required>
+            </div>
+
+            <button class="btn btn-guardar">➕ Agregar corte</button>
+        </form>
+
+        <table class="tabla" style="margin-top:15px;">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Documento</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in documentos if d.tipo == 'corte' %}
+                <tr>
+                    <td>{{ d.fecha }}</td>
+                    <td><a href="{{ d.archivo }}" target="_blank">📄 Ver documento</a></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="2" style="text-align:center;">No hay cortes registrados</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+<!-- ========================= -->
+<!-- 🏢 ENTREGA DE APARTAMENTOS -->
+<!-- ========================= -->
+<div class="pqr-card" style="margin-top:30px;">
+
+    <h4>🏢 Entrega de apartamentos</h4>
+
+    <!-- ➕ CREAR TORRE -->
+    <form method="post"
+          action="/proyectos/{{ proyecto.id }}/torres/nueva"
+          style="display:flex; gap:20px; flex-wrap:wrap;
+                 margin-top:15px; margin-bottom:25px; align-items:flex-end;">
+
+        <div>
+            <label>Nombre de la torre</label>
+            <input type="text" name="nombre_torre" placeholder="Torre 1" required>
+        </div>
+
+        <div>
+            <label>Cantidad de apartamentos</label>
+            <input type="number" name="cantidad_apartamentos" min="1" placeholder="48" required>
+        </div>
+
+        <button type="submit" class="btn btn-guardar">
+            ➕ Agregar torre
+        </button>
+    </form>
+
+    <!-- 📊 TABLA -->
+    <table class="tabla">
+        <thead>
+            <tr>
+                <th>Torre</th>
+                <th>Total apartamentos</th>
+                <th>Apartamentos entregados</th>
+                <th>Actualizar</th>
+                <th>Eliminar</th>
+            </tr>
+        </thead>
+        <tbody>
+
+            {% for t in torres %}
+            <tr>
+                <td>{{ t.nombre_torre }}</td>
+
+                <td style="text-align:center;">
+                    {{ t.cantidad_apartamentos }}
+                </td>
+
+                <!-- ✏️ ACTUALIZAR -->
+                <td>
+                    <form method="post"
+                          action="/proyectos/{{ proyecto.id }}/torres/{{ t.id }}/editar"
+                          style="display:flex; gap:10px; justify-content:center; align-items:center;">
+                        <input
+                            type="number"
+                            name="apartamentos_entregados"
+                            min="0"
+                            max="{{ t.cantidad_apartamentos }}"
+                            value="{{ t.apartamentos_entregados }}"
+                            style="width:80px;">
+                        <button class="btn btn-guardar" style="padding:4px 10px;">
+                            💾
+                        </button>
+                    </form>
+                </td>
+
+                <td style="text-align:center;">
+                    {{ t.apartamentos_entregados }}
+                </td>
+
+                <!-- 🗑 ELIMINAR -->
+                <td style="text-align:center;">
+                    <form method="post"
+                          action="/proyectos/{{ proyecto.id }}/torres/{{ t.id }}/eliminar"
+                          onsubmit="return confirm('¿Seguro que deseas eliminar esta torre? Esta acción no se puede deshacer.')">
+                        <button
+                            type="submit"
+                            class="btn btn-eliminar"
+                            style="padding:4px 10px;">
+                            🗑
+                        </button>
+                    </form>
+                </td>
+            </tr>
+
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align:center;">
+                    No hay torres registradas
+                </td>
+            </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+
+    <!-- 🔢 RESUMEN -->
+    <div style="margin-top:20px; padding:15px; background:#f8f9fa;
+                border-radius:6px; display:flex; gap:30px; font-weight:500;">
+        <div>
+            Total apartamentos:
+            <strong>{{ total_apartamentos }}</strong>
+        </div>
+
+        <div>
+            Apartamentos entregados:
+            <strong>{{ total_entregados }}</strong>
+        </div>
+
+        <div>
+            Avance de entrega:
+            <strong>{{ porcentaje_entregados | round(2) }} %</strong>
+        </div>
+    </div>
+
+</div>
+
+</div>
+
+<script>
+function mostrarEdicionContrato() {
+    document.getElementById("form-contrato").style.display = "flex";
+}
+</script>
+
+{% endblock %}
