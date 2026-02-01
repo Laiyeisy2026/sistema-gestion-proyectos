@@ -381,16 +381,18 @@ def calcular_estado_cumplimiento(tarea: Tarea) -> str:
     return "Sin fecha planificada"
 
 def calcular_variacion_dias(tarea: Tarea):
-    # Necesitamos ambas fechas
     if not tarea.fecha_fin or not tarea.fecha_fin_real:
         return None
 
-    fecha_plan = tarea.fecha_fin.date()
-    fecha_real = tarea.fecha_fin_real
+    def to_date(valor):
+        if hasattr(valor, "date"):
+            return valor.date()
+        return valor
 
-    diferencia = (fecha_real - fecha_plan).days
+    fecha_plan = to_date(tarea.fecha_fin)
+    fecha_real = to_date(tarea.fecha_fin_real)
 
-    return diferencia
+    return (fecha_real - fecha_plan).days
 
 def calcular_valor_avance(tarea: Tarea) -> float:
     if not tarea.valor_total:
