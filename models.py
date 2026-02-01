@@ -113,7 +113,12 @@ class Proyecto(Base):
     creado_en = Column(DateTime, default=datetime.now)
 
     imagen = Column(String, nullable=True)
+
+    # ⬇️ LEGACY (PDF antiguo, puedes dejarlo por ahora)
     dashboard_pdf = Column(String, nullable=True)
+
+    # ⬇️ NUEVO: Power BI Service
+    dashboard_powerbi_url = Column(Text, nullable=True)
 
     fecha_firma_contrato = Column(Date, nullable=True)
     contrato_archivo = Column(String, nullable=True)
@@ -124,10 +129,9 @@ class Proyecto(Base):
     acta_inicio_archivo = Column(String, nullable=True)
 
     torres = relationship(
-    "TorreProyecto",
-    cascade="all, delete"
+        "TorreProyecto",
+        cascade="all, delete"
     )
-
 
     
 from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey

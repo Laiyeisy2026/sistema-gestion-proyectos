@@ -1,4 +1,6 @@
 venv/ 
-__pycache__/ 
-*.pyc 
-.env 
+__pycache__/
+*.pyc
+.env
+test_db
+Tema_Empresarial_Negro_Amarillo

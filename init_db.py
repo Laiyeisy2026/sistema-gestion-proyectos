@@ -1,6 +1,5 @@
-from database import engine, Base
-from models import Operario
+from database import engine
+from models import Base
 
-print("Creando tablas...")
 Base.metadata.create_all(bind=engine)
 print("✅ Tablas creadas correctamente")

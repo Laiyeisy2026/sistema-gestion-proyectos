@@ -8,6 +8,9 @@ from datetime import datetime, date
 from fastapi import UploadFile, File
 import os
 import uuid
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 from database import SessionLocal
 from models import Proyecto, Operario, Tarea, AsignacionOperario, FaseRecurso, PQR, TorreProyecto
@@ -22,10 +25,13 @@ from starlette.status import HTTP_303_SEE_OTHER
 from datetime import datetime, date
 from fastapi import UploadFile, File
 import os
+import smtplib
 import uuid
 
 from database import SessionLocal
 from models import Proyecto, Operario, Tarea, AsignacionOperario, FaseRecurso
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # =========================
 # USUARIOS (LOGIN SIMPLE)
@@ -38,6 +44,46 @@ USUARIOS = {
         "password": "Obras2026#"
     }
 }
+
+import os
+
+def enviar_alerta_tarea(tarea, proyecto):
+    remitente = "interventoriapyb2025@gmail.com"
+    destinatario = "interventoriapyb2025@gmail.com"
+
+    asunto = f"⚠️ Actividad fuera de plazo – Proyecto {proyecto.nombre}"
+
+    cuerpo = f"""
+La siguiente actividad se encuentra en ejecución fuera del tiempo establecido:
+
+Proyecto: {proyecto.nombre}
+Tarea: {tarea.nombre}
+Fecha inicio planificada: {tarea.fecha_inicio}
+Fecha inicio real: {tarea.fecha_inicio_real}
+Porcentaje avance: {tarea.porcentaje_completado or 0} %
+
+Por favor revisar.
+"""
+
+    mensaje = MIMEMultipart()
+    mensaje["From"] = remitente
+    mensaje["To"] = destinatario
+    mensaje["Subject"] = asunto
+    mensaje.attach(MIMEText(cuerpo, "plain"))
+
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+
+        EMAIL_USER = os.getenv("EMAIL_USER")
+        EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
+
+        server.login(EMAIL_USER, EMAIL_PASSWORD)
+        server.send_message(mensaje)
+        server.quit()
+
+    except Exception as e:
+        print("Error enviando correo:", e)
 
 app = FastAPI()
 app.add_middleware(
@@ -274,17 +320,27 @@ TIPO_A_NIVEL = {
 def calcular_estado_cumplimiento(tarea: Tarea) -> str:
     hoy = date.today()
 
+    # 🔧 NORMALIZAR TODAS LAS FECHAS A date
+    def to_date(valor):
+        if not valor:
+            return None
+        if hasattr(valor, "date"):
+            return valor.date()
+        return valor
+
+    fecha_inicio = to_date(tarea.fecha_inicio)
+    fecha_fin = to_date(tarea.fecha_fin)
+    inicio_real = to_date(tarea.fecha_inicio_real)
+    fin_real = to_date(tarea.fecha_fin_real)
+
     # =========================
     # 1️⃣ SI YA TERMINÓ
     # =========================
-    if tarea.fecha_fin_real:
-        if tarea.fecha_fin:
-            fin_plan = tarea.fecha_fin.date()
-            fin_real = tarea.fecha_fin_real
-
-            if fin_real < fin_plan:
+    if fin_real:
+        if fecha_fin:
+            if fin_real < fecha_fin:
                 return "Cumplida antes del plazo"
-            elif fin_real > fin_plan:
+            elif fin_real > fecha_fin:
                 return "Cumplida fuera del plazo"
             else:
                 return "Cumplida a tiempo"
@@ -294,13 +350,10 @@ def calcular_estado_cumplimiento(tarea: Tarea) -> str:
     # =========================
     # 2️⃣ EN EJECUCIÓN – VALIDAR INICIO REAL
     # =========================
-    if tarea.fecha_inicio and tarea.fecha_inicio_real:
-        inicio_plan = tarea.fecha_inicio.date()
-        inicio_real = tarea.fecha_inicio_real
-
-        if inicio_real > inicio_plan:
+    if fecha_inicio and inicio_real:
+        if inicio_real > fecha_inicio:
             return "En ejecución fuera del tiempo establecido"
-        elif inicio_real < inicio_plan:
+        elif inicio_real < fecha_inicio:
             return "En ejecución antes de lo previsto"
         else:
             return "En ejecución (a tiempo)"
@@ -308,7 +361,7 @@ def calcular_estado_cumplimiento(tarea: Tarea) -> str:
     # =========================
     # 3️⃣ SOLO PLAN, SIN REAL
     # =========================
-    if tarea.fecha_inicio and hoy >= tarea.fecha_inicio.date():
+    if fecha_inicio and hoy >= fecha_inicio:
         return "En ejecución (sin inicio real)"
 
     # =========================
@@ -497,15 +550,23 @@ def guardar_edicion_tarea(
         tarea.tipo = tipo
         tarea.nivel_esquema = TIPO_A_NIVEL.get(tipo, 1)
         tarea.nivel_real = tarea.nivel_esquema
-        tarea.fecha_inicio = fecha_inicio or None
-        tarea.fecha_fin = fecha_fin or None
-
-        # 🔴 ESTO ES LO QUE FALTABA
-        tarea.fecha_inicio_real = fecha_inicio_real or None
-        tarea.fecha_fin_real = fecha_fin_real or None
+        tarea.fecha_inicio = parse_date(fecha_inicio)
+        tarea.fecha_fin = parse_date(fecha_fin)
+        tarea.fecha_inicio_real = parse_date(fecha_inicio_real)
+        tarea.fecha_fin_real = parse_date(fecha_fin_real)
 
         tarea.porcentaje_completado = porcentaje_completado
         tarea.valor_total = valor_total
+                # 🔔 ALERTA POR CORREO SI VA FUERA DE TIEMPO
+        estado = calcular_estado_cumplimiento(tarea)
+
+        if estado == "En ejecución fuera del tiempo establecido":
+            proyecto = db.query(Proyecto).filter(
+                Proyecto.id == proyecto_id
+            ).first()
+
+            if proyecto:
+                enviar_alerta_tarea(tarea, proyecto)
         db.commit()
 
     return RedirectResponse(
@@ -1896,3 +1957,29 @@ from fastapi.responses import RedirectResponse
 @app.get("/proyectos")
 def proyectos():
     return RedirectResponse("/", status_code=302)
+
+@app.get("/proyectos/{proyecto_id}/dashboard", response_class=HTMLResponse)
+def ver_dashboard(
+    proyecto_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
+
+    if not proyecto:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {
+            "request": request,
+            "proyecto": proyecto
+        }
+    )
+
+from datetime import datetime
+
+def parse_date(fecha_str):
+    if not fecha_str:
+        return None
+    return datetime.strptime(fecha_str, "%Y-%m-%d").date()
