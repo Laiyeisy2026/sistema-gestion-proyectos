@@ -146,22 +146,19 @@
 
         {# 🟢 FECHA FIN REAL CON COMPARACIÓN CORRECTA #}
         <td>
-        {% if item.tarea.fecha_fin_real and item.tarea.fecha_fin %}
-            {% if item.tarea.fecha_fin_real and item.tarea.fecha_fin %}
-    {% set fin_real = item.tarea.fecha_fin_real.date() %}
-    {% set fin_plan = item.tarea.fecha_fin.date() %}
-
-    {% if fin_real < fin_plan %}
+        <td>
+{% if item.tarea.fecha_fin_real and item.tarea.fecha_fin %}
+    {% if item.tarea.fecha_fin_real.date() < item.tarea.fecha_fin.date() %}
         <span style="color: green;">
-            {{ fin_real }}
+            {{ item.tarea.fecha_fin_real.date() }}
         </span>
-    {% elif fin_real > fin_plan %}
+    {% elif item.tarea.fecha_fin_real.date() > item.tarea.fecha_fin.date() %}
         <span style="color: red;">
-            {{ fin_real }}
+            {{ item.tarea.fecha_fin_real.date() }}
         </span>
     {% else %}
         <span style="color: orange;">
-            {{ fin_real }}
+            {{ item.tarea.fecha_fin_real.date() }}
         </span>
     {% endif %}
 {% elif item.tarea.fecha_fin_real %}
@@ -169,6 +166,7 @@
 {% else %}
     —
 {% endif %}
+</td>
             {% elif item.tarea.fecha_fin_real > item.tarea.fecha_fin.date() %}
                 <span style="color: red;">
                     {{ item.tarea.fecha_fin_real }}
