@@ -1639,9 +1639,15 @@ def informacion_general(
     ).all()
 
     # 🛡 PÓLIZAS
-    polizas = db.query(PolizaProyecto).filter(
-        PolizaProyecto.proyecto_id == proyecto_id
-    ).all()
+    polizas_data = []
+    
+    for p in polizas:
+        polizas_data.append({
+            "poliza": p,
+            "estado": estado_poliza(p.fecha_fin)
+            
+            })
+
 
     # 🆕🏢 TORRES / APARTAMENTOS
     torres = db.query(TorreProyecto).filter(
@@ -1667,7 +1673,7 @@ def informacion_general(
             "request": request,
             "proyecto": proyecto,
             "documentos": documentos,        # 👈 EXISTENTE
-            "polizas": polizas,              # 👈 EXISTENTE
+            "polizas": polizas_data,              # 👈 EXISTENTE
 
             # 🆕 NUEVO (NO rompe nada)
             "torres": torres,

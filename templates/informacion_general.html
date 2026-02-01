@@ -307,34 +307,35 @@
                 </tr>
             </thead>
             <tbody>
-                {% for p in polizas %}
-                <tr>
-                    <td>{{ p.tipo_poliza }}</td>
-                    <td>{{ p.aseguradora or "—" }}</td>
-                    <td>{{ p.fecha_inicio }} → {{ p.fecha_fin }}</td>
-                    <td style="text-align:center; font-weight:500;">
-    {% set estado = p.fecha_fin | estado_poliza %}
+                {% for item in polizas %}
+<tr>
+    <td>{{ item.poliza.tipo_poliza }}</td>
+    <td>{{ item.poliza.aseguradora or "—" }}</td>
+    <td>{{ item.poliza.fecha_inicio }} → {{ item.poliza.fecha_fin }}</td>
 
-    {% if estado == "verde" %}
-        <span title="Póliza vigente">🟢 Vigente</span>
+    <td style="text-align:center; font-weight:500;">
+        {% if item.estado == "verde" %}
+            🟢 Vigente
+        {% elif item.estado == "amarillo" %}
+            🟡 Por vencer
+        {% elif item.estado == "rojo" %}
+            🔴 Vencida
+        {% else %}
+            ⚪ Sin definir
+        {% endif %}
+    </td>
 
-    {% elif estado == "amarillo" %}
-        <span title="La póliza vence pronto">🟡 Por vencer</span>
-
-    {% elif estado == "rojo" %}
-        <span title="La póliza está vencida">🔴 Vencida</span>
-
-    {% else %}
-        <span title="Sin fecha de vencimiento">⚪ Sin definir</span>
-    {% endif %}
-</td>
-                    <td><a href="{{ p.archivo }}" target="_blank">📄 Ver</a></td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" style="text-align:center;">No hay pólizas registradas</td>
-                </tr>
-                {% endfor %}
+    <td>
+        <a href="{{ item.poliza.archivo }}" target="_blank">📄 Ver</a>
+    </td>
+</tr>
+{% else %}
+<tr>
+    <td colspan="5" style="text-align:center;">
+        No hay pólizas registradas
+    </td>
+</tr>
+{% endfor %}         
             </tbody>
         </table>
     </div>
