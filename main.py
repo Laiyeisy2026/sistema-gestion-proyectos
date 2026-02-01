@@ -86,10 +86,18 @@ Por favor revisar.
         print("Error enviando correo:", e)
 
 app = FastAPI()
+
+# 🔧 carpetas necesarias
+os.makedirs("static", exist_ok=True)
+os.makedirs("static/proyectos", exist_ok=True)
+os.makedirs("static/dashboards", exist_ok=True)
+os.makedirs("static/documentos", exist_ok=True)
+
 app.add_middleware(
     SessionMiddleware,
     secret_key="clave-super-secreta-cambiala"
 )
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
