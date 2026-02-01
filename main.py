@@ -331,22 +331,19 @@ TIPO_A_NIVEL = {
 def calcular_estado_cumplimiento(tarea: Tarea) -> str:
     hoy = date.today()
 
-    # 🔧 NORMALIZAR TODAS LAS FECHAS A date
     def to_date(valor):
         if not valor:
             return None
-        if hasattr(valor, "date"):
+        if isinstance(valor, datetime):
             return valor.date()
-        return valor
+        return valor  # ya es date
 
     fecha_inicio = to_date(tarea.fecha_inicio)
     fecha_fin = to_date(tarea.fecha_fin)
     inicio_real = to_date(tarea.fecha_inicio_real)
     fin_real = to_date(tarea.fecha_fin_real)
 
-    # =========================
     # 1️⃣ SI YA TERMINÓ
-    # =========================
     if fin_real:
         if fecha_fin:
             if fin_real < fecha_fin:
@@ -355,12 +352,9 @@ def calcular_estado_cumplimiento(tarea: Tarea) -> str:
                 return "Cumplida fuera del plazo"
             else:
                 return "Cumplida a tiempo"
-
         return "Cumplida (sin fecha planificada)"
 
-    # =========================
-    # 2️⃣ EN EJECUCIÓN – VALIDAR INICIO REAL
-    # =========================
+    # 2️⃣ EN EJECUCIÓN
     if fecha_inicio and inicio_real:
         if inicio_real > fecha_inicio:
             return "En ejecución fuera del tiempo establecido"
@@ -369,15 +363,10 @@ def calcular_estado_cumplimiento(tarea: Tarea) -> str:
         else:
             return "En ejecución (a tiempo)"
 
-    # =========================
-    # 3️⃣ SOLO PLAN, SIN REAL
-    # =========================
+    # 3️⃣ SOLO PLAN
     if fecha_inicio and hoy >= fecha_inicio:
         return "En ejecución (sin inicio real)"
 
-    # =========================
-    # 4️⃣ SIN FECHAS
-    # =========================
     return "Sin fecha planificada"
 
 def calcular_variacion_dias(tarea: Tarea):
@@ -385,17 +374,12 @@ def calcular_variacion_dias(tarea: Tarea):
         return None
 
     def to_date(valor):
-        if not valor:
-            return None
-        if hasattr(valor, "date"):
+        if isinstance(valor, datetime):
             return valor.date()
         return valor
 
     fecha_plan = to_date(tarea.fecha_fin)
     fecha_real = to_date(tarea.fecha_fin_real)
-
-    if not fecha_plan or not fecha_real:
-        return None
 
     return (fecha_real - fecha_plan).days
 
