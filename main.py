@@ -1639,6 +1639,11 @@ def informacion_general(
     ).all()
 
     # 🛡 PÓLIZAS
+
+    polizas = db.query(PolizaProyecto).filter(
+        PolizaProyecto.proyecto_id == proyecto_id
+    ).all()
+
     polizas_data = []
     
     for p in polizas:
