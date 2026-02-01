@@ -385,12 +385,17 @@ def calcular_variacion_dias(tarea: Tarea):
         return None
 
     def to_date(valor):
+        if not valor:
+            return None
         if hasattr(valor, "date"):
             return valor.date()
         return valor
 
     fecha_plan = to_date(tarea.fecha_fin)
     fecha_real = to_date(tarea.fecha_fin_real)
+
+    if not fecha_plan or not fecha_real:
+        return None
 
     return (fecha_real - fecha_plan).days
 
