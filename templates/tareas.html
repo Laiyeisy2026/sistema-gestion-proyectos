@@ -144,9 +144,8 @@
             {{ item.tarea.fecha_fin.date() if item.tarea.fecha_fin else '' }}
         </td>
 
-        {# 🟢 FECHA FIN REAL CON COMPARACIÓN CORRECTA #}
-        <td>
-        <td>
+        {# 🟢 FECHA FIN REAL #}
+<td>
 {% if item.tarea.fecha_fin_real and item.tarea.fecha_fin %}
     {% if item.tarea.fecha_fin_real.date() < item.tarea.fecha_fin.date() %}
         <span style="color: green;">
