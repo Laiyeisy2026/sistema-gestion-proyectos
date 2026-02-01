@@ -12,7 +12,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from database import SessionLocal
+from database import SessionLocal, engine
+from models import Base
 from models import Proyecto, Operario, Tarea, AsignacionOperario, FaseRecurso, PQR, TorreProyecto
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -86,6 +87,8 @@ Por favor revisar.
         print("Error enviando correo:", e)
 
 app = FastAPI()
+
+Base.metadata.create_all(bind=engine)
 
 # 🔧 carpetas necesarias
 os.makedirs("static", exist_ok=True)
