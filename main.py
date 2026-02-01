@@ -116,7 +116,15 @@ templates.env.filters["moneda"] = formato_moneda
 
 # 👇👇👇 AQUÍ 👇👇👇
 
+def to_date(valor):
+    if not valor:
+        return None
+    if isinstance(valor, datetime):
+        return valor.date()
+    return valor
+
 def estado_poliza(fecha_fin):
+    fecha_fin = to_date(fecha_fin)
     if not fecha_fin:
         return "gris"
 
@@ -129,8 +137,6 @@ def estado_poliza(fecha_fin):
         return "amarillo"
     else:
         return "verde"
-
-templates.env.filters["estado_poliza"] = estado_poliza
 
 # =========================
 # DB
@@ -364,7 +370,7 @@ def calcular_estado_cumplimiento(tarea: Tarea) -> str:
             return "En ejecución (a tiempo)"
 
     # 3️⃣ SOLO PLAN
-    if fecha_inicio and hoy >= fecha_inicio:
+    if fecha_inicio and hoy >= to_date(fecha_inicio):
         return "En ejecución (sin inicio real)"
 
     return "Sin fecha planificada"
