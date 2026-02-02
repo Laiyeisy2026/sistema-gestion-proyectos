@@ -130,8 +130,9 @@ class Proyecto(Base):
 
     torres = relationship(
         "TorreProyecto",
-        cascade="all, delete"
-    )
+        back_populates="proyecto",
+        cascade="all, delete-orphan"
+        )
 
     
 from sqlalchemy import Column, Integer, String, Text, Date, DateTime, ForeignKey
@@ -201,4 +202,7 @@ class TorreProyecto(Base):
     cantidad_apartamentos = Column(Integer, nullable=False)
     apartamentos_entregados = Column(Integer, default=0)
 
-    proyecto = relationship("Proyecto")
+    proyecto = relationship(
+        "Proyecto",
+        back_populates="torres"
+        )
