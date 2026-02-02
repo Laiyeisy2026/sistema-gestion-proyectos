@@ -6,9 +6,17 @@ from sqlalchemy.orm import Session
 from starlette.status import HTTP_303_SEE_OTHER
 from datetime import datetime, date
 from fastapi import UploadFile, File
+from fastapi import HTTPException
 import os
 import uuid
 import smtplib
+from supabase import create_client
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "documentos")
+
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -16,9 +24,6 @@ from database import SessionLocal, engine
 from models import Base
 from models import Proyecto, Operario, Tarea, AsignacionOperario, FaseRecurso, PQR, TorreProyecto
 from starlette.middleware.sessions import SessionMiddleware
-
-from fastapi import FastAPI, Depends, Request, Form
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
