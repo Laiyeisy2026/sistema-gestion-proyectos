@@ -1,43 +1,55 @@
-from fastapi import FastAPI, Depends, Request, Form
-from fastapi.staticfiles import StaticFiles
+# =========================
+# IMPORTS (ÚNICOS Y LIMPIOS)
+# =========================
+from fastapi import (
+    FastAPI, Depends, Request, Form,
+    UploadFile, File, HTTPException
+)
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+
 from sqlalchemy.orm import Session
+from starlette.middleware.sessions import SessionMiddleware
 from starlette.status import HTTP_303_SEE_OTHER
+
 from datetime import datetime, date
-from fastapi import UploadFile, File
-from fastapi import HTTPException
 import os
 import uuid
 import smtplib
+
+from dotenv import load_dotenv
 from supabase import create_client
+
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+from decimal import Decimal
+
+from database import SessionLocal, engine
+from models import (
+    Base, Proyecto, Operario, Tarea, AsignacionOperario,
+    FaseRecurso, PQR, TorreProyecto,
+    DocumentoProyecto, PolizaProyecto
+)
+
+# =========================
+# ENV & SUPABASE
+# =========================
+load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "documentos")
 
+if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+    raise RuntimeError("Supabase env vars no configuradas")
+
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
-from database import SessionLocal, engine
-from models import Base
-from models import Proyecto, Operario, Tarea, AsignacionOperario, FaseRecurso, PQR, TorreProyecto
-from starlette.middleware.sessions import SessionMiddleware
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
-from starlette.status import HTTP_303_SEE_OTHER
-from datetime import datetime, date
-from fastapi import UploadFile, File
-import os
-import smtplib
-import uuid
+app = FastAPI()
 
-from database import SessionLocal
-from models import Proyecto, Operario, Tarea, AsignacionOperario, FaseRecurso
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+Base.metadata.create_all(bind=engine)
 
 # =========================
 # USUARIOS (LOGIN SIMPLE)
@@ -91,15 +103,10 @@ Por favor revisar.
     except Exception as e:
         print("Error enviando correo:", e)
 
-app = FastAPI()
-
-Base.metadata.create_all(bind=engine)
-
 # 🔧 carpetas necesarias
 os.makedirs("static", exist_ok=True)
 os.makedirs("static/proyectos", exist_ok=True)
 os.makedirs("static/dashboards", exist_ok=True)
-os.makedirs("static/documentos", exist_ok=True)
 
 app.add_middleware(
     SessionMiddleware,
@@ -431,6 +438,9 @@ def ver_tareas_proyecto(
         item["estado_cumplimiento"] = calcular_estado_cumplimiento(tarea_item)
         item["valor_avance"] = calcular_valor_avance(tarea_item)
         item["variacion_dias"] = calcular_variacion_dias(tarea_item)
+
+        item["fin_plan"] = to_date(tarea_item.fecha_fin)
+        item["fin_real"] = to_date(tarea_item.fecha_fin_real)
         
         tareas_wbs.append(item)
 
@@ -450,7 +460,7 @@ def crear_tarea_proyecto(
     tipo: str = Form(...),
     fecha_inicio: str | None = Form(None),
     fecha_fin: str | None = Form(None),
-    porcentaje_completado: int = Form(0),
+    porcentaje_completado: Decimal = Form(0),
     valor_total: float | None = Form(None),
     db: Session = Depends(get_db)
 ):
@@ -552,7 +562,7 @@ def guardar_edicion_tarea(
     fecha_fin: str | None = Form(None),
     fecha_inicio_real: str | None = Form(None),   # 👈 NUEVO
     fecha_fin_real: str | None = Form(None),      # 👈 NUEVO
-    porcentaje_completado: int = Form(0),
+    porcentaje_completado: Decimal = Form(0),
     valor_total: float | None = Form(None),
     db: Session = Depends(get_db)
 ):
@@ -1777,12 +1787,12 @@ def guardar_contrato(
 
     # guardar archivo si viene
     if contrato_archivo and contrato_archivo.filename:
-        ruta = guardar_archivo_proyecto(
+        url = guardar_archivo_supabase(
             proyecto_id,
             contrato_archivo,
             "contrato"
         )
-        proyecto.contrato_archivo = ruta
+        proyecto.contrato_archivo = url
 
     db.commit()
 
@@ -1804,7 +1814,7 @@ def agregar_poliza(
     archivo: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    ruta_archivo = guardar_archivo_proyecto(
+    ruta_archivo = guardar_archivo_supabase(
         proyecto_id,
         archivo,
         "polizas"
@@ -1839,7 +1849,7 @@ def agregar_documento(
     archivo: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
-    ruta_archivo = guardar_archivo_proyecto(
+    ruta_archivo = guardar_archivo_supabase(
         proyecto_id,
         archivo,
         "documentos"
@@ -1881,12 +1891,12 @@ def guardar_acta_inicio(
 
     # guardar archivo
     if acta_inicio_archivo and acta_inicio_archivo.filename:
-        ruta = guardar_archivo_proyecto(
+        url = guardar_archivo_supabase(
             proyecto_id,
             acta_inicio_archivo,
             "acta_inicio"
         )
-        proyecto.acta_inicio_archivo = ruta
+        proyecto.acta_inicio_archivo = url
 
     db.commit()
 
@@ -2006,4 +2016,51 @@ from datetime import datetime
 def parse_date(fecha_str):
     if not fecha_str:
         return None
-    return datetime.strptime(fecha_str, "%Y-%m-%d").date()
+    try:
+        fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+        if fecha.year > 9999:
+            return None
+        return fecha
+    except ValueError:
+        return None
+
+def guardar_archivo_supabase(
+    proyecto_id: int,
+    archivo: UploadFile,
+    subcarpeta: str
+) -> str | None:
+    """
+    Sube un archivo a Supabase Storage y retorna la URL pública
+    Ruta: documentos/proyecto_{id}/{subcarpeta}/uuid.ext
+    """
+
+    if not archivo or not archivo.filename:
+        return None
+
+    # extensión
+    ext = os.path.splitext(archivo.filename)[1]
+
+    # nombre único
+    nombre_archivo = f"{uuid.uuid4()}{ext}"
+
+    # ruta en el bucket
+    ruta_storage = f"proyecto_{proyecto_id}/{subcarpeta}/{nombre_archivo}"
+
+    # leer contenido
+    contenido = archivo.file.read()
+
+    # subir a Supabase
+    supabase.storage.from_(SUPABASE_BUCKET).upload(
+        ruta_storage,
+        contenido,
+        file_options={
+            "content-type": archivo.content_type
+        }
+    )
+
+    # obtener URL pública
+    url_publica = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(
+        ruta_storage
+    )
+
+    return url_publica

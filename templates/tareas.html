@@ -65,10 +65,11 @@
 
     <label>% Avance</label>
     <input type="number"
-           name="porcentaje_completado"
-           min="0"
-           max="100"
-           value="{{ tarea_editando.porcentaje_completado if tarea_editando else 0 }}">
+       name="porcentaje_completado"
+       min="0"
+       max="100"
+       step="0.01"
+       value="{{ tarea_editando.porcentaje_completado if tarea_editando else 0 }}">
     
     <label>Valor total</label>
     <input type="number"
@@ -147,29 +148,27 @@
         {# 🟢 FECHA FIN REAL #}
 
         <td>
-{% if item.tarea.fecha_fin_real and item.tarea.fecha_fin %}
-    {% set fin_real = item.tarea.fecha_fin_real.date() %}
-    {% set fin_plan = item.tarea.fecha_fin.date() %}
-
-    {% if fin_real < fin_plan %}
-        <span style="color: green;">
-            {{ fin_real }}
-        </span>
-    {% elif fin_real > fin_plan %}
-        <span style="color: red;">
-            {{ fin_real }}
-        </span>
+    {% if item.tarea.fecha_fin_real %}
+        {% if item.variacion_dias is not none %}
+            {% if item.variacion_dias < 0 %}
+                <span style="color: green;">
+                    {{ item.tarea.fecha_fin_real }}
+                </span>
+            {% elif item.variacion_dias > 0 %}
+                <span style="color: red;">
+                    {{ item.tarea.fecha_fin_real }}
+                </span>
+            {% else %}
+                <span style="color: orange;">
+                    {{ item.tarea.fecha_fin_real }}
+                </span>
+            {% endif %}
+        {% else %}
+            {{ item.tarea.fecha_fin_real }}
+        {% endif %}
     {% else %}
-        <span style="color: orange;">
-            {{ fin_real }}
-        </span>
+        —
     {% endif %}
-
-{% elif item.tarea.fecha_fin_real %}
-    {{ item.tarea.fecha_fin_real.date() }}
-{% else %}
-    —
-{% endif %}
 </td>
 
         <td>
