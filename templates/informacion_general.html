@@ -45,19 +45,24 @@
                         width:fit-content;
                     ">
                     <span>📄 Contrato:</span>
-                    <a
-                        href="{{ proyecto.contrato_archivo }}"
-                        target="_blank"
-                        style="
-                            background:#eef2ff;
-                            color:#1e3a8a;
-                            padding:5px 10px;
-                            border-radius:5px;
-                            text-decoration:none;
-                            font-weight:500;
-                        ">
-                        Ver documento
-                    </a>
+
+{% if proyecto.contrato_archivo and proyecto.contrato_archivo.startswith('http') %}
+    <a
+        href="{{ proyecto.contrato_archivo }}"
+        target="_blank"
+        style="
+            background:#eef2ff;
+            color:#1e3a8a;
+            padding:5px 10px;
+            border-radius:5px;
+            text-decoration:none;
+            font-weight:500;
+        ">
+        Ver documento
+    </a>
+{% else %}
+    <span style="color:#6b7280;">No cargado</span>
+{% endif %}
                 </div>
                 {% endif %}
 
@@ -141,20 +146,25 @@
                     gap:10px;
                     width:fit-content;
                 ">
-                <span>📑 Acta:</span>
-                <a
-                    href="{{ proyecto.acta_inicio_archivo }}"
-                    target="_blank"
-                    style="
-                        background:#eef2ff;
-                        color:#1e3a8a;
-                        padding:5px 10px;
-                        border-radius:5px;
-                        text-decoration:none;
-                        font-weight:500;
-                    ">
-                    Ver documento
-                </a>
+        <span>📑 Acta:</span>
+
+{% if proyecto.acta_inicio_archivo and proyecto.acta_inicio_archivo.startswith('http') %}
+    <a
+        href="{{ proyecto.acta_inicio_archivo }}"
+        target="_blank"
+        style="
+            background:#eef2ff;
+            color:#1e3a8a;
+            padding:5px 10px;
+            border-radius:5px;
+            text-decoration:none;
+            font-weight:500;
+        ">
+        Ver documento
+    </a>
+{% else %}
+    <span style="color:#6b7280;">No cargada</span>
+{% endif %}
             </div>
             {% endif %}
 
