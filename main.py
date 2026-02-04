@@ -2054,7 +2054,8 @@ def guardar_archivo_supabase(
         ruta_storage,
         contenido,
         file_options={
-            "content-type": archivo.content_type
+            "content-type": archivo.content_type,
+            "upsert": True
         }
     )
 
