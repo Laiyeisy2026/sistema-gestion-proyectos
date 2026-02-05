@@ -110,7 +110,8 @@ os.makedirs("static/dashboards", exist_ok=True)
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key="clave-super-secreta-cambiala"
+    secret_key="clave-super-secreta-cambiala",
+    max_age=30 * 60  # 30 minutos
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
