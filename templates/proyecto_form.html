@@ -96,31 +96,6 @@
                         {% endif %}
                     </div>
 
-                    <!-- DASHBOARD -->
-                    <div>
-                        <label style="display:block; margin-bottom:6px;">
-                            📊 Dashboard Power BI (PDF)
-                        </label>
-
-                        <input
-                            type="file"
-                            name="dashboard_pdf"
-                            accept="application/pdf"
-                            style="width:100%;">
-
-                        {% if proyecto and proyecto.dashboard_pdf %}
-                        <div style="margin-top:10px;">
-                            <a
-                                href="{{ proyecto.dashboard_pdf }}"
-                                target="_blank"
-                                class="btn btn-editar"
-                                style="width:100%; text-align:center;">
-                                📄 Ver dashboard actual
-                            </a>
-                        </div>
-                        {% endif %}
-                    </div>
-
                 </div>
 
             </div>
