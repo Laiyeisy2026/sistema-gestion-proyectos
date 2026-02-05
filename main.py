@@ -16,13 +16,12 @@ from starlette.status import HTTP_303_SEE_OTHER
 from datetime import datetime, date
 import os
 import uuid
-import smtplib
+
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 from dotenv import load_dotenv
 from supabase import create_client
-
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 from decimal import Decimal
 
@@ -37,6 +36,9 @@ from models import (
 # ENV & SUPABASE
 # =========================
 load_dotenv()
+
+print("SENDGRID_API_KEY:", os.getenv("SENDGRID_API_KEY"))
+print("SENDGRID_FROM_EMAIL:", os.getenv("SENDGRID_FROM_EMAIL"))
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
@@ -66,12 +68,15 @@ USUARIOS = {
 import os
 
 def enviar_alerta_tarea(tarea, proyecto):
-    remitente = "interventoriapyb2025@gmail.com"
-    destinatario = "interventoriapyb2025@gmail.com"
 
-    asunto = f"⚠️ Actividad fuera de plazo – Proyecto {proyecto.nombre}"
+    print("SENDGRID_API_KEY:", os.getenv("SENDGRID_API_KEY"))
+    print("SENDGRID_FROM_EMAIL:", os.getenv("SENDGRID_FROM_EMAIL"))
 
-    cuerpo = f"""
+    mensaje = Mail(
+        from_email=os.getenv("SENDGRID_FROM_EMAIL"),
+        to_emails="interventoriapyb2025@gmail.com",
+        subject=f"⚠️ Actividad fuera de plazo – Proyecto {proyecto.nombre}",
+        plain_text_content=f"""
 La siguiente actividad se encuentra en ejecución fuera del tiempo establecido:
 
 Proyecto: {proyecto.nombre}
@@ -82,26 +87,15 @@ Porcentaje avance: {tarea.porcentaje_completado or 0} %
 
 Por favor revisar.
 """
-
-    mensaje = MIMEMultipart()
-    mensaje["From"] = remitente
-    mensaje["To"] = destinatario
-    mensaje["Subject"] = asunto
-    mensaje.attach(MIMEText(cuerpo, "plain"))
+    )
 
     try:
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-
-        EMAIL_USER = os.getenv("EMAIL_USER")
-        EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
-
-        server.login(EMAIL_USER, EMAIL_PASSWORD)
-        server.send_message(mensaje)
-        server.quit()
-
+        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+        response = sg.send(mensaje)
+        print("STATUS SENDGRID:", response.status_code)
+        print("HEADERS SENDGRID:", response.headers)
     except Exception as e:
-        print("Error enviando correo:", e)
+        print("Error enviando correo SendGrid:", e)
 
 # 🔧 carpetas necesarias
 os.makedirs("static", exist_ok=True)
@@ -128,6 +122,10 @@ def formato_moneda(valor):
 templates.env.filters["moneda"] = formato_moneda
 
 # 👇👇👇 AQUÍ 👇👇👇
+
+def verificar_sesion(request: Request):
+    if "user" not in request.session:
+        return RedirectResponse("/login", status_code=303)
 
 def to_date(valor):
     if not valor:
@@ -166,8 +164,10 @@ def get_db():
 # =====================================================
 @app.get("/", response_class=HTMLResponse)
 def inicio(request: Request, db: Session = Depends(get_db)):
-    if "user" not in request.session:
-        return RedirectResponse("/login", status_code=303)
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
 
     proyectos = db.query(Proyecto).order_by(Proyecto.id).all()
     return templates.TemplateResponse(
@@ -177,6 +177,11 @@ def inicio(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/proyectos/nuevo", response_class=HTMLResponse)
 def nuevo_proyecto_form(request: Request):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     return templates.TemplateResponse(
         "proyecto_form.html",
         {"request": request}
@@ -184,6 +189,7 @@ def nuevo_proyecto_form(request: Request):
 
 @app.post("/proyectos/nuevo")
 def crear_proyecto(
+    request: Request,
     nombre: str = Form(...),
     descripcion: str = Form(None),
     fecha_inicio: str | None = Form(None),
@@ -192,6 +198,11 @@ def crear_proyecto(
     dashboard_pdf: UploadFile = File(None),   # 👈 AÑADIR
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     ruta_imagen = None
     ruta_dashboard = None
 
@@ -233,6 +244,10 @@ def editar_proyecto_form(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
 
     if not proyecto:
@@ -291,6 +306,10 @@ def dashboard_proyecto(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+    
     proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
 
     if not proyecto:
@@ -420,9 +439,10 @@ def ver_tareas_proyecto(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
 
-    if "user" not in request.session:
-        return RedirectResponse("/login", status_code=303)
     proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
 
     tareas = (
@@ -457,6 +477,7 @@ def ver_tareas_proyecto(
 @app.post("/proyectos/{proyecto_id}/tareas/nueva")
 def crear_tarea_proyecto(
     proyecto_id: int,
+    request: Request,
     nombre: str = Form(...),
     tipo: str = Form(...),
     fecha_inicio: str | None = Form(None),
@@ -465,6 +486,11 @@ def crear_tarea_proyecto(
     valor_total: float | None = Form(None),
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     nivel = TIPO_A_NIVEL.get(tipo, 1)
     tarea = Tarea(
         proyecto_id=proyecto_id,
@@ -487,6 +513,11 @@ def crear_tarea_proyecto(
 # =====================================================
 @app.get("/tareas", response_class=HTMLResponse)
 def ver_tareas(request: Request, db: Session = Depends(get_db)):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     tareas = db.query(Tarea).all()
     tareas_wbs = []
     for item in generar_wbs_project(tareas):
@@ -502,7 +533,15 @@ def ver_tareas(request: Request, db: Session = Depends(get_db)):
 # TAREAS – ELIMINAR
 # =====================================================
 @app.get("/tareas/eliminar/{tarea_id}")
-def eliminar_tarea(tarea_id: int, db: Session = Depends(get_db)):
+def eliminar_tarea(
+    tarea_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     db.query(AsignacionOperario).filter(
         AsignacionOperario.tarea_id == tarea_id
     ).delete(synchronize_session=False)
@@ -557,6 +596,7 @@ def editar_tarea(
 def guardar_edicion_tarea(
     proyecto_id: int,
     tarea_id: int,
+    request: Request,
     nombre: str = Form(...),
     tipo: str = Form(...),
     fecha_inicio: str | None = Form(None),
@@ -567,6 +607,10 @@ def guardar_edicion_tarea(
     valor_total: float | None = Form(None),
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     tarea = db.query(Tarea).filter(Tarea.id == tarea_id).first()
 
     if tarea:
@@ -627,8 +671,9 @@ def eliminar_tarea_proyecto(
 @app.get("/operarios", response_class=HTMLResponse)
 def ver_operarios(request: Request, db: Session = Depends(get_db)):
 
-    if "user" not in request.session:
-        return RedirectResponse("/login", status_code=303)
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
 
     operarios = db.query(Operario).all()
     proyecto = db.query(Proyecto).first()
@@ -673,13 +718,30 @@ def ver_operarios(request: Request, db: Session = Depends(get_db)):
     )
 
 @app.post("/operarios/nuevo")
-def crear_operario(nombre: str = Form(...), actividad: str = Form(...), db: Session = Depends(get_db)):
+def crear_operario(
+    request: Request,
+    nombre: str = Form(...),
+    actividad: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     db.add(Operario(nombre=nombre, actividad=actividad))
     db.commit()
     return RedirectResponse("/operarios", status_code=303)
 
 @app.get("/operarios/eliminar/{operario_id}")
-def eliminar_operario(operario_id: int, db: Session = Depends(get_db)):
+def eliminar_operario(
+    operario_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     operario = db.query(Operario).filter(Operario.id == operario_id).first()
     if operario:
         db.delete(operario)
@@ -694,6 +756,10 @@ def nuevo_operario_form(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     proyecto = db.query(Proyecto).first()  # proyecto activo
 
     return templates.TemplateResponse(
@@ -715,6 +781,10 @@ def editar_operario_form(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     operario = db.query(Operario).filter(Operario.id == operario_id).first()
 
     if not operario:
@@ -734,10 +804,16 @@ def editar_operario_form(
 @app.post("/operarios/editar/{operario_id}")
 def editar_operario(
     operario_id: int,
+    request: Request,
     nombre: str = Form(...),
     actividad: str = Form(...),
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     operario = db.query(Operario).filter(Operario.id == operario_id).first()
 
     if not operario:
@@ -756,8 +832,10 @@ def editar_operario(
 @app.get("/asignaciones", response_class=HTMLResponse)
 def ver_asignaciones(request: Request, db: Session = Depends(get_db)):
 
-    if "user" not in request.session:
-        return RedirectResponse("/login", status_code=303)
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
 
     proyecto = db.query(Proyecto).first()
 
@@ -796,8 +874,15 @@ def ver_asignaciones(request: Request, db: Session = Depends(get_db)):
         }
     )
 
-@app.get("/asignaciones/liberar/{asignacion_id}")
-def liberar_operario(asignacion_id: int, db: Session = Depends(get_db)):
+def liberar_operario(
+    asignacion_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     asignacion = db.query(AsignacionOperario).filter(
         AsignacionOperario.id == asignacion_id
     ).first()
@@ -820,6 +905,11 @@ def editar_asignacion_form(
     request: Request,
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     asignaciones = (
         db.query(AsignacionOperario, Operario, Tarea)
         .join(Operario, AsignacionOperario.operario_id == Operario.id)
@@ -854,11 +944,16 @@ def editar_asignacion_form(
 @app.post("/asignaciones/editar/{asignacion_id}")
 def guardar_edicion_asignacion(
     asignacion_id: int,
+    request: Request,
     operario_id: int = Form(...),
     tarea_id: int = Form(...),
     horas_asignadas: float = Form(...),
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     asignacion = db.query(AsignacionOperario)\
         .filter(AsignacionOperario.id == asignacion_id)\
         .first()
@@ -875,10 +970,15 @@ def guardar_edicion_asignacion(
 
 @app.post("/operarios/principal")
 def guardar_operarios_por_fase(
+    request: Request,
     tarea_id: int = Form(...),
     cantidad: int = Form(...),
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     # 1️⃣ Buscar la tarea (fase)
     tarea = db.query(Tarea).filter(Tarea.id == tarea_id).first()
     if not tarea:
@@ -927,8 +1027,14 @@ def guardar_operarios_por_fase(
 @app.get("/operarios/fase/eliminar/{fase_id}")
 def eliminar_fase_recurso(
     fase_id: int,
+    request: Request,
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     fase = db.query(FaseRecurso).filter(FaseRecurso.id == fase_id).first()
 
     if not fase:
@@ -992,6 +1098,11 @@ def editar_cupo_form(
     request: Request,
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     tareas = db.query(Tarea).order_by(Tarea.tipo, Tarea.nombre).all()
 
     return templates.TemplateResponse(
@@ -1008,6 +1119,11 @@ def asignar_actividad_form(
     request: Request,
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     # 1️⃣ Cupo
     asignacion = db.query(AsignacionOperario).filter(
         AsignacionOperario.id == asignacion_id
@@ -1067,10 +1183,15 @@ def asignar_actividad_form(
 @app.post("/asignaciones/asignar/{asignacion_id}")
 def guardar_asignacion_actividad(
     asignacion_id: int,
+    request: Request,
     tarea_id: int = Form(...),
     horas_asignadas: float = Form(...),
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     asignacion = db.query(AsignacionOperario).filter(
         AsignacionOperario.id == asignacion_id
     ).first()
@@ -1091,6 +1212,11 @@ def ver_operarios_proyecto(
     request: Request,
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
 
     if not proyecto:
@@ -1129,6 +1255,10 @@ def ver_asignaciones_proyecto(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
 
     if not proyecto:
@@ -1173,10 +1303,16 @@ def ver_asignaciones_proyecto(
 @app.post("/proyectos/{proyecto_id}/operarios/principal")
 def guardar_operarios_por_fase_proyecto(
     proyecto_id: int,
+    request: Request,
     tarea_id: int = Form(...),
     cantidad: int = Form(...),
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     # 1️⃣ Buscar tarea
     tarea = db.query(Tarea).filter(
         Tarea.id == tarea_id,
@@ -1304,11 +1440,16 @@ def asignar_actividad_form_proyecto(
 @app.post("/proyectos/{proyecto_id}/asignaciones/asignar/{asignacion_id}")
 def guardar_asignacion_actividad_proyecto(
     proyecto_id: int,
+    request: Request,
     asignacion_id: int,
     tarea_id: int = Form(...),
     horas_asignadas: float = Form(...),
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     asignacion = db.query(AsignacionOperario).filter(
         AsignacionOperario.id == asignacion_id
     ).first()
@@ -1435,9 +1576,15 @@ def guardar_edicion_fase_recurso_proyecto(
 @app.get("/proyectos/{proyecto_id}/operarios/fase/eliminar/{fase_id}")
 def eliminar_fase_recurso_proyecto(
     proyecto_id: int,
+    request: Request,
     fase_id: int,
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     fase = db.query(FaseRecurso).filter(
         FaseRecurso.id == fase_id,
         FaseRecurso.proyecto_id == proyecto_id
@@ -1474,9 +1621,15 @@ def eliminar_fase_recurso_proyecto(
 @app.get("/proyectos/{proyecto_id}/asignaciones/liberar/{asignacion_id}")
 def liberar_operario_proyecto(
     proyecto_id: int,
+    request: Request,
     asignacion_id: int,
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     asignacion = db.query(AsignacionOperario).filter(
         AsignacionOperario.id == asignacion_id
     ).first()
@@ -1532,6 +1685,10 @@ def ver_pqr(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
     if not proyecto:
         return RedirectResponse("/", status_code=303)
@@ -1556,6 +1713,7 @@ def ver_pqr(
 @app.post("/proyectos/{proyecto_id}/pqr")
 def guardar_pqr(
     proyecto_id: int,
+    request: Request,
     fecha_requerimiento: str = Form(...),
     problema: str = Form(...),
     solucion: str = Form(None),
@@ -1563,6 +1721,10 @@ def guardar_pqr(
     fecha_solucion: str = Form(None),
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     estado = "cerrado" if fecha_solucion else "abierto"
 
     pqr = PQR(
@@ -1591,6 +1753,10 @@ def editar_pqr_form(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
     pqr = db.query(PQR).filter(PQR.id == pqr_id).first()
 
@@ -1618,11 +1784,16 @@ def editar_pqr_form(
 @app.post("/proyectos/{proyecto_id}/pqr/editar/{pqr_id}")
 def guardar_edicion_pqr(
     proyecto_id: int,
+    request: Request,
     pqr_id: int,
     solucion: str = Form(None),
     fecha_solucion: str = Form(None),
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     pqr = db.query(PQR).filter(PQR.id == pqr_id).first()
 
     if pqr:
@@ -1642,6 +1813,10 @@ def informacion_general(
     request: Request,
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     proyecto = db.query(Proyecto).filter(
         Proyecto.id == proyecto_id
     ).first()
@@ -1707,6 +1882,7 @@ def informacion_general(
 @app.post("/proyectos/{proyecto_id}/informacion")
 def guardar_informacion_general(
     proyecto_id: int,
+    request: Request,
     fecha_firma_contrato: str | None = Form(None),
     anticipo_fecha: str | None = Form(None),
     anticipo_valor: float | None = Form(None),
@@ -1714,6 +1890,11 @@ def guardar_informacion_general(
     poliza_fin: str | None = Form(None),
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+   
     proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
 
     if not proyecto:
@@ -1769,11 +1950,17 @@ from fastapi import Form, Depends
 @app.post("/proyectos/{proyecto_id}/informacion/contrato")
 def guardar_contrato(
     proyecto_id: int,
+    request: Request,
     fecha_firma_contrato: str = Form(None),
     duracion_contrato_dias: int = Form(None),
     contrato_archivo: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
+    
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     proyecto = db.query(Proyecto).filter(
         Proyecto.id == proyecto_id
     ).first()
@@ -1808,6 +1995,7 @@ from models import PolizaProyecto
 @app.post("/proyectos/{proyecto_id}/polizas/nueva")
 def agregar_poliza(
     proyecto_id: int,
+    request: Request,
     tipo_poliza: str = Form(...),
     aseguradora: str = Form(None),
     fecha_inicio: str = Form(...),
@@ -1815,6 +2003,11 @@ def agregar_poliza(
     archivo: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     ruta_archivo = guardar_archivo_supabase(
         proyecto_id,
         archivo,
@@ -1843,6 +2036,7 @@ from models import DocumentoProyecto
 @app.post("/proyectos/{proyecto_id}/documentos/nuevo")
 def agregar_documento(
     proyecto_id: int,
+    request: Request,
     tipo: str = Form(...),
     descripcion: str = Form(None),
     fecha: str = Form(None),
@@ -1850,6 +2044,11 @@ def agregar_documento(
     archivo: UploadFile = File(...),
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     ruta_archivo = guardar_archivo_supabase(
         proyecto_id,
         archivo,
@@ -1909,10 +2108,16 @@ def guardar_acta_inicio(
 @app.post("/proyectos/{proyecto_id}/torres/{torre_id}/editar")
 def editar_torre_apartamentos(
     proyecto_id: int,
+    request: Request,
     torre_id: int,
     apartamentos_entregados: int = Form(...),
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     torre = db.query(TorreProyecto).filter(
         TorreProyecto.id == torre_id,
         TorreProyecto.proyecto_id == proyecto_id
@@ -1942,10 +2147,16 @@ def editar_torre_apartamentos(
 @app.post("/proyectos/{proyecto_id}/torres/nueva")
 def crear_torre(
     proyecto_id: int,
+    request: Request,
     nombre_torre: str = Form(...),
     cantidad_apartamentos: int = Form(...),
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     if cantidad_apartamentos <= 0:
         return RedirectResponse(
             f"/proyectos/{proyecto_id}/informacion",
@@ -1970,9 +2181,15 @@ def crear_torre(
 @app.post("/proyectos/{proyecto_id}/torres/{torre_id}/eliminar")
 def eliminar_torre(
     proyecto_id: int,
+    request: Request,
     torre_id: int,
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     torre = db.query(TorreProyecto).filter(
         TorreProyecto.id == torre_id,
         TorreProyecto.proyecto_id == proyecto_id
@@ -1999,6 +2216,11 @@ def ver_dashboard(
     request: Request,
     db: Session = Depends(get_db)
 ):
+
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
 
     if not proyecto:
@@ -2066,3 +2288,17 @@ def guardar_archivo_supabase(
     )
 
     return url_publica
+
+@app.get("/test-email")
+def test_email():
+    mensaje = Mail(
+        from_email=os.getenv("SENDGRID_FROM_EMAIL"),
+        to_emails="interventoriapyb2025@gmail.com",
+        subject="PRUEBA SENDGRID OK",
+        plain_text_content="Este es un correo de prueba enviado desde FastAPI."
+    )
+
+    sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+    response = sg.send(mensaje)
+
+    return {"status_code": response.status_code}
