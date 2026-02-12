@@ -10,10 +10,7 @@ if not DATABASE_URL:
 
 engine = create_engine(
     DATABASE_URL,
-    pool_pre_ping=True,
-    pool_size=3,
-    max_overflow=5,
-    connect_args={"sslmode": "require"}
+    pool_pre_ping=True
 )
 
 SessionLocal = sessionmaker(
