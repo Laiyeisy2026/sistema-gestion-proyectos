@@ -2306,3 +2306,9 @@ def test_email():
     response = sg.send(mensaje)
 
     return {"status_code": response.status_code}
+
+@app.get("/debug-session")
+def debug_session(request: Request):
+    return {
+        "session_data": dict(request.session)
+    }
