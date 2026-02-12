@@ -109,7 +109,7 @@ app.add_middleware(
     secret_key="clave-super-secreta-cambiala",
     max_age=60 * 60,
     same_site="lax",
-    https_only=True
+    https_only=False
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
