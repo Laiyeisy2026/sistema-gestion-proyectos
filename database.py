@@ -1,14 +1,12 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from dotenv import load_dotenv
-
-load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# 🔧 fallback SOLO para local
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL no está configurada")
+    DATABASE_URL = "postgresql://postgres:Postgres1234@localhost:5432/Proyectos"
 
 engine = create_engine(
     DATABASE_URL,

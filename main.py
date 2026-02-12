@@ -13,9 +13,6 @@ from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.status import HTTP_303_SEE_OTHER
 
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
-
 from datetime import datetime, date
 import os
 import uuid
@@ -54,8 +51,9 @@ supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 app = FastAPI()
 
-app.add_middleware(ProxyHeadersMiddleware)
-
+@app.on_event("startup")
+def startup():
+    Base.metadata.create_all(bind=engine)
 
 # =========================
 # USUARIOS (LOGIN SIMPLE)
@@ -109,8 +107,7 @@ os.makedirs("static/dashboards", exist_ok=True)
 app.add_middleware(
     SessionMiddleware,
     secret_key="clave-super-secreta-cambiala",
-    max_age=30 * 60,
-    https_only=True
+    max_age=30 * 60  # 30 minutos
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
