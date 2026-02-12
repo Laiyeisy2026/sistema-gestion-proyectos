@@ -13,8 +13,6 @@ from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.status import HTTP_303_SEE_OTHER
 
-from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
-
 from datetime import datetime, date
 import os
 import uuid
@@ -52,8 +50,6 @@ if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 app = FastAPI()
-
-app.add_middleware(ProxyHeadersMiddleware)
 
 @app.on_event("startup")
 def startup():
