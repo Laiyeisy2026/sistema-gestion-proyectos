@@ -222,7 +222,7 @@ from sqlalchemy import Column, Integer, Date, ForeignKey, Numeric
 from database import Base
 
 class AnticipoProyecto(Base):
-    __tablename__ = "anticipos_proyecto"
+    __tablename__ = "anticipo_proyecto"
 
     id = Column(Integer, primary_key=True, index=True)
     proyecto_id = Column(Integer, ForeignKey("proyecto.id"), nullable=False)
