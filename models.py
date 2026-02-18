@@ -232,7 +232,7 @@ class AnticipoProyecto(Base):
     valor = Column(Numeric(14,2), nullable=False)
 
 class CorteProyecto(Base):
-    __tablename__ = "cortes_proyecto"
+    __tablename__ = "corte_proyecto"
 
     id = Column(Integer, primary_key=True, index=True)
     proyecto_id = Column(Integer, ForeignKey("proyecto.id"), nullable=False)
@@ -242,7 +242,7 @@ class CorteProyecto(Base):
     porcentaje = Column(Numeric(5,2), nullable=False)
 
 class CorteCostoProyecto(Base):
-    __tablename__ = "cortes_costo_proyecto"
+    __tablename__ = "corte_costo_proyecto"
 
     id = Column(Integer, primary_key=True, index=True)
     proyecto_id = Column(Integer, ForeignKey("proyecto.id"))
