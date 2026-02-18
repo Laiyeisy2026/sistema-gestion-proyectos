@@ -29,7 +29,8 @@ from database import SessionLocal, engine
 from models import (
     Base, Proyecto, Operario, Tarea, AsignacionOperario,
     FaseRecurso, PQR, TorreProyecto,
-    DocumentoProyecto, PolizaProyecto
+    DocumentoProyecto, PolizaProyecto, LluviaProyecto,
+    AnticipoProyecto, CorteProyecto, CorteCostoProyecto
 )
 
 # =========================
@@ -452,21 +453,27 @@ def ver_tareas_proyecto(
     tareas = (
         db.query(Tarea)
         .filter(Tarea.proyecto_id == proyecto_id)
-        .order_by(Tarea.id)
+        .order_by(Tarea.posicion, Tarea.id)
         .all()
     )
 
     tareas_wbs = []
+    total_variacion = 0   # 👈 suma total
+
     for item in generar_wbs_project(tareas):
         tarea_item = item["tarea"]
-        
+    
         item["estado_cumplimiento"] = calcular_estado_cumplimiento(tarea_item)
         item["valor_avance"] = calcular_valor_avance(tarea_item)
         item["variacion_dias"] = calcular_variacion_dias(tarea_item)
 
+        # 👇 SUMAMOS LOS DÍAS
+        if item["variacion_dias"] is not None:
+            total_variacion += item["variacion_dias"]
+
         item["fin_plan"] = to_date(tarea_item.fecha_fin)
         item["fin_real"] = to_date(tarea_item.fecha_fin_real)
-        
+    
         tareas_wbs.append(item)
 
     return templates.TemplateResponse(
@@ -474,9 +481,12 @@ def ver_tareas_proyecto(
         {
             "request": request,
             "proyecto": proyecto,   # ✅ CLAVE
-            "tareas": tareas_wbs
+            "tareas": tareas_wbs,
+            "total_variacion": total_variacion
         }
     )
+
+from sqlalchemy import func
 
 @app.post("/proyectos/{proyecto_id}/tareas/nueva")
 def crear_tarea_proyecto(
@@ -484,33 +494,53 @@ def crear_tarea_proyecto(
     request: Request,
     nombre: str = Form(...),
     tipo: str = Form(...),
+    id_padre: int | None = Form(None),
     fecha_inicio: str | None = Form(None),
     fecha_fin: str | None = Form(None),
     porcentaje_completado: Decimal = Form(0),
     valor_total: float | None = Form(None),
     db: Session = Depends(get_db)
 ):
-
     redir = verificar_sesion(request)
     if redir:
         return redir
 
-    nivel = TIPO_A_NIVEL.get(tipo, 1)
+    # 🔹 NIVEL SEGÚN PADRE
+    if id_padre:
+        padre = db.query(Tarea).filter(Tarea.id == id_padre).first()
+        nivel = padre.nivel_esquema + 1 if padre else 1
+    else:
+        nivel = TIPO_A_NIVEL.get(tipo, 1)
+
+    # 🔹 POSICIÓN AL FINAL
+    max_pos = db.query(func.max(Tarea.posicion))\
+        .filter(Tarea.proyecto_id == proyecto_id)\
+        .scalar()
+
+    posicion = (max_pos or 0) + 1
+
     tarea = Tarea(
         proyecto_id=proyecto_id,
         nombre=nombre,
         tipo=tipo,
         nivel_esquema=nivel,
         nivel_real=nivel,
+        id_padre=id_padre,
+        posicion=posicion,
         fecha_inicio=fecha_inicio or None,
         fecha_fin=fecha_fin or None,
         porcentaje_completado=porcentaje_completado,
         valor_total=valor_total,
         creado_en=datetime.now()
     )
+
     db.add(tarea)
     db.commit()
-    return RedirectResponse(f"/proyectos/{proyecto_id}/tareas", status_code=303)
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/tareas",
+        status_code=303
+    )
 
 # =====================================================
 # TAREAS – RUTAS ORIGINALES (NO TOCADAS)
@@ -1714,6 +1744,65 @@ def ver_pqr(
         }
     )
 
+@app.get("/proyectos/{proyecto_id}/pqr/editar/{pqr_id}", response_class=HTMLResponse)
+def editar_pqr(
+    proyecto_id: int,
+    pqr_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    proyecto = db.query(Proyecto).get(proyecto_id)
+
+    pqr_list = (
+        db.query(PQR)
+        .filter(PQR.proyecto_id == proyecto_id)
+        .order_by(PQR.fecha_requerimiento.desc())
+        .all()
+    )
+
+    pqr_editando = db.query(PQR).get(pqr_id)
+
+    return templates.TemplateResponse(
+        "pqr.html",
+        {
+            "request": request,
+            "proyecto": proyecto,
+            "pqr_list": pqr_list,
+            "pqr_editando": pqr_editando,
+            "en_proyecto": True
+        }
+    )
+
+@app.post("/proyectos/{proyecto_id}/pqr/editar/{pqr_id}")
+def actualizar_pqr(
+    proyecto_id: int,
+    pqr_id: int,
+    solucion: str = Form(None),
+    fecha_solucion: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    pqr = db.query(PQR).get(pqr_id)
+
+    if pqr:
+        pqr.solucion = solucion
+        pqr.fecha_solucion = fecha_solucion
+
+        if pqr.fecha_solucion:
+            pqr.estado = "cerrado"
+        else:
+            pqr.estado = "pendiente"
+
+        db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/pqr",
+        status_code=303
+    )
+
 @app.post("/proyectos/{proyecto_id}/pqr")
 def guardar_pqr(
     proyecto_id: int,
@@ -1729,15 +1818,15 @@ def guardar_pqr(
     if redir:
         return redir
 
-    estado = "cerrado" if fecha_solucion else "abierto"
+    estado = "cerrado" if fecha_solucion else "pendiente"
 
     pqr = PQR(
         proyecto_id=proyecto_id,
-        fecha_requerimiento=fecha_requerimiento,
+        fecha_requerimiento=parse_date(fecha_requerimiento),
         problema=problema,
         solucion=solucion,
         ubicacion=ubicacion,
-        fecha_solucion=fecha_solucion,
+        fecha_solucion = fecha_solucion or None,
         estado=estado
     )
 
@@ -1745,67 +1834,6 @@ def guardar_pqr(
     db.commit()
 
     # ✅ REDIRECT CORRECTO
-    return RedirectResponse(
-        f"/proyectos/{proyecto_id}/pqr",
-        status_code=303
-    )
-
-@app.get("/proyectos/{proyecto_id}/pqr/editar/{pqr_id}", response_class=HTMLResponse)
-def editar_pqr_form(
-    proyecto_id: int,
-    pqr_id: int,
-    request: Request,
-    db: Session = Depends(get_db)
-):
-    redir = verificar_sesion(request)
-    if redir:
-        return redir
-
-    proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
-    pqr = db.query(PQR).filter(PQR.id == pqr_id).first()
-
-    if not proyecto or not pqr:
-        return RedirectResponse(f"/proyectos/{proyecto_id}/pqr", status_code=303)
-
-    pqr_list = (
-        db.query(PQR)
-        .filter(PQR.proyecto_id == proyecto_id)
-        .order_by(PQR.fecha_requerimiento.desc())
-        .all()
-    )
-
-    return templates.TemplateResponse(
-        "pqr.html",
-        {
-            "request": request,
-            "proyecto": proyecto,
-            "pqr_list": pqr_list,
-            "pqr_editando": pqr,
-            "en_proyecto": True
-        }
-    )
-
-@app.post("/proyectos/{proyecto_id}/pqr/editar/{pqr_id}")
-def guardar_edicion_pqr(
-    proyecto_id: int,
-    request: Request,
-    pqr_id: int,
-    solucion: str = Form(None),
-    fecha_solucion: str = Form(None),
-    db: Session = Depends(get_db)
-):
-    redir = verificar_sesion(request)
-    if redir:
-        return redir
-
-    pqr = db.query(PQR).filter(PQR.id == pqr_id).first()
-
-    if pqr:
-        pqr.solucion = solucion
-        pqr.fecha_solucion = fecha_solucion or None
-        pqr.estado = "cerrado" if fecha_solucion else "abierto"
-        db.commit()
-
     return RedirectResponse(
         f"/proyectos/{proyecto_id}/pqr",
         status_code=303
@@ -1834,7 +1862,6 @@ def informacion_general(
     ).all()
 
     # 🛡 PÓLIZAS
-
     polizas = db.query(PolizaProyecto).filter(
         PolizaProyecto.proyecto_id == proyecto_id
     ).all()
@@ -1845,9 +1872,16 @@ def informacion_general(
         polizas_data.append({
             "poliza": p,
             "estado": estado_poliza(p.fecha_fin)
-            
-            })
+        })
 
+    # 💰 ANTICIPOS
+    anticipos = db.query(AnticipoProyecto)\
+        .filter(AnticipoProyecto.proyecto_id == proyecto_id)\
+        .order_by(AnticipoProyecto.fecha.desc())\
+        .all()
+
+    total_porcentaje = sum(a.porcentaje for a in anticipos)
+    total_valor = sum(a.valor for a in anticipos)
 
     # 🆕🏢 TORRES / APARTAMENTOS
     torres = db.query(TorreProyecto).filter(
@@ -1867,21 +1901,70 @@ def informacion_general(
         if total_apartamentos > 0 else 0
     )
 
+    # ✂️ CORTES
+    cortes = db.query(CorteProyecto)\
+        .filter(CorteProyecto.proyecto_id == proyecto_id)\
+        .order_by(CorteProyecto.numero_corte.asc())\
+        .all()
+
+    # 💰 AVANCE DE OBRA - COSTO
+    cortes_costo = db.query(CorteCostoProyecto)\
+        .filter(CorteCostoProyecto.proyecto_id == proyecto_id)\
+        .order_by(CorteCostoProyecto.numero_corte)\
+        .all()
+
+    # 🌧️ LLUVIAS
+    lluvias = db.query(LluviaProyecto)\
+        .filter(LluviaProyecto.proyecto_id == proyecto_id)\
+        .order_by(LluviaProyecto.hora_inicio.desc())\
+        .all()
+
+    total_lluvias = len(lluvias)
+
+    from datetime import datetime, date
+
+    total_horas_lluvia = 0
+
+    for l in lluvias:
+        if l.hora_inicio and l.hora_fin:
+            inicio = datetime.combine(date.today(), l.hora_inicio)
+            fin = datetime.combine(date.today(), l.hora_fin)
+
+            if fin > inicio:
+                horas = (fin - inicio).total_seconds() / 3600
+                total_horas_lluvia += horas
+
+    # convertir a minutos totales
+    # convertir a minutos totales
+    total_minutos = round(total_horas_lluvia * 60)
+
+    horas = total_minutos // 60
+    minutos = total_minutos % 60
+
+    total_horas_lluvia = f"{horas}h {minutos}m"
+
+
     return templates.TemplateResponse(
         "informacion_general.html",
         {
             "request": request,
             "proyecto": proyecto,
-            "documentos": documentos,        # 👈 EXISTENTE
-            "polizas": polizas_data,              # 👈 EXISTENTE
-
-            # 🆕 NUEVO (NO rompe nada)
+            "documentos": documentos,
+            "cortes": cortes,
+            "cortes_costo": cortes_costo,
+            "polizas": polizas_data,
+            "anticipos": anticipos,
+            "total_porcentaje": total_porcentaje,
+            "total_valor": total_valor,
             "torres": torres,
             "total_apartamentos": total_apartamentos,
             "total_entregados": total_entregados,
-            "porcentaje_entregados": porcentaje_entregados
+            "porcentaje_entregados": porcentaje_entregados,
+            "lluvias": lluvias,
+            "total_horas_lluvia": total_horas_lluvia
         }
     )
+
 
 @app.post("/proyectos/{proyecto_id}/informacion")
 def guardar_informacion_general(
@@ -1917,34 +2000,35 @@ def guardar_informacion_general(
         status_code=303
     )
 
-def guardar_archivo_proyecto(
+def guardar_archivo_supabase(
     proyecto_id: int,
-    archivo,
+    archivo: UploadFile,
     subcarpeta: str
-):
-    """
-    Guarda un archivo en:
-    static/documentos/proyecto_{id}/{subcarpeta}/
-    """
+) -> str | None:
 
     if not archivo or not archivo.filename:
         return None
 
-    # carpeta base
-    base_path = f"static/documentos/proyecto_{proyecto_id}/{subcarpeta}"
-    os.makedirs(base_path, exist_ok=True)
-
-    # nombre único
     ext = os.path.splitext(archivo.filename)[1]
     nombre_archivo = f"{uuid.uuid4()}{ext}"
 
-    ruta_fisica = os.path.join(base_path, nombre_archivo)
+    ruta_storage = f"proyecto_{proyecto_id}/{subcarpeta}/{nombre_archivo}"
 
-    with open(ruta_fisica, "wb") as f:
-        f.write(archivo.file.read())
+    contenido = archivo.file.read()
 
-    # ruta pública
-    return "/" + ruta_fisica.replace("\\", "/")
+    supabase.storage.from_(SUPABASE_BUCKET).upload(
+        ruta_storage,
+        contenido,
+        {
+            "content-type": archivo.content_type
+        }
+    )
+
+    url_publica = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(
+        ruta_storage
+    )
+
+    return url_publica
 
 from fastapi import UploadFile, File
 from fastapi.responses import RedirectResponse
@@ -2312,3 +2396,278 @@ def debug_session(request: Request):
     return {
         "session_data": dict(request.session)
     }
+
+from sqlalchemy import func
+
+@app.get("/proyectos/{proyecto_id}/tareas/nueva")
+def nueva_tarea_desde_boton(
+    proyecto_id: int,
+    hija_de: int | None = None,
+    db: Session = Depends(get_db)
+):
+    if hija_de:
+        padre = db.query(Tarea).filter(Tarea.id == hija_de).first()
+
+        if not padre:
+            return RedirectResponse(
+                f"/proyectos/{proyecto_id}/tareas",
+                status_code=303
+            )
+
+        # insertar justo después del padre
+        posicion = padre.posicion + 1
+
+        # mover las siguientes hacia abajo
+        db.query(Tarea).filter(
+            Tarea.proyecto_id == proyecto_id,
+            Tarea.posicion >= posicion
+        ).update(
+            {Tarea.posicion: Tarea.posicion + 1},
+            synchronize_session=False
+        )
+
+        nivel = padre.nivel_esquema + 1
+
+    else:
+        # nueva principal al final
+        max_pos = db.query(func.max(Tarea.posicion)).filter(
+            Tarea.proyecto_id == proyecto_id
+        ).scalar()
+
+        posicion = (max_pos or 0) + 1
+        nivel = 1
+
+    tarea = Tarea(
+        proyecto_id=proyecto_id,
+        nombre="Nueva actividad",
+        tipo="ACTIVIDAD",
+        nivel_esquema=nivel,
+        nivel_real=nivel,
+        posicion=posicion,
+        creado_en=datetime.now()
+    )
+
+    db.add(tarea)
+    db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/tareas/editar/{tarea.id}",
+        status_code=303
+    )
+
+from fastapi import Form
+from datetime import time
+
+@app.post("/proyectos/{proyecto_id}/lluvia")
+def agregar_lluvia(
+    proyecto_id: int,
+    hora_inicio: time = Form(...),
+    hora_fin: time = Form(...),
+    observacion: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    lluvia = LluviaProyecto(
+        proyecto_id=proyecto_id,
+        hora_inicio=hora_inicio,
+        hora_fin=hora_fin,
+        observacion=observacion
+    )
+
+    db.add(lluvia)
+    db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+@app.post("/proyectos/{proyecto_id}/lluvias/{lluvia_id}/eliminar")
+def eliminar_lluvia(
+    proyecto_id: int,
+    lluvia_id: int,
+    db: Session = Depends(get_db)
+):
+    lluvia = db.query(LluviaProyecto).filter(
+        LluviaProyecto.id == lluvia_id
+    ).first()
+
+    if lluvia:
+        db.delete(lluvia)
+        db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+from fastapi import Form
+from starlette.responses import RedirectResponse
+
+@app.post("/proyectos/{proyecto_id}/anticipos/nuevo")
+def crear_anticipo(
+    proyecto_id: int,
+    fecha: str = Form(...),
+    porcentaje: float = Form(...),
+    valor: float = Form(...),
+    db: Session = Depends(get_db)
+):
+    nuevo = AnticipoProyecto(
+        proyecto_id=proyecto_id,
+        fecha=fecha,
+        porcentaje=porcentaje,
+        valor=valor
+    )
+
+    db.add(nuevo)
+    db.commit()
+
+    return RedirectResponse(
+        url=f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+@app.post("/proyectos/{proyecto_id}/anticipos/{anticipo_id}/eliminar")
+def eliminar_anticipo(
+    proyecto_id: int,
+    anticipo_id: int,
+    db: Session = Depends(get_db)
+):
+    anticipo = db.query(AnticipoProyecto).filter(
+        AnticipoProyecto.id == anticipo_id,
+        AnticipoProyecto.proyecto_id == proyecto_id
+    ).first()
+
+    if anticipo:
+        db.delete(anticipo)
+        db.commit()
+
+    return RedirectResponse(
+        url=f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+@app.post("/proyectos/{proyecto_id}/cortes/nuevo")
+def crear_corte(
+    proyecto_id: int,
+    numero_corte: int = Form(...),
+    fecha: date = Form(...),
+    porcentaje: float = Form(...),
+    db: Session = Depends(get_db)
+):
+    nuevo = CorteProyecto(
+        proyecto_id=proyecto_id,
+        numero_corte=numero_corte,
+        fecha=fecha,
+        porcentaje=porcentaje
+    )
+
+    db.add(nuevo)
+    db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+@app.post("/proyectos/{proyecto_id}/cortes/{corte_id}/eliminar")
+def eliminar_corte(
+    proyecto_id: int,
+    corte_id: int,
+    db: Session = Depends(get_db)
+):
+    corte = db.query(CorteProyecto).get(corte_id)
+
+    if corte:
+        db.delete(corte)
+        db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+@app.post("/proyectos/{proyecto_id}/cortes/{corte_id}/editar")
+def editar_corte(
+    proyecto_id: int,
+    corte_id: int,
+    numero_corte: int = Form(...),
+    fecha: date = Form(...),
+    porcentaje: float = Form(...),
+    db: Session = Depends(get_db)
+):
+    corte = db.query(CorteProyecto).get(corte_id)
+
+    if corte:
+        corte.numero_corte = numero_corte
+        corte.fecha = fecha
+        corte.porcentaje = porcentaje
+        db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+from fastapi import Form
+
+@app.post("/proyectos/{proyecto_id}/cortes-costo/nuevo")
+def crear_corte_costo(
+    proyecto_id: int,
+    numero_corte: int = Form(...),
+    porcentaje: float = Form(...),
+    valor: float = Form(...),
+    db: Session = Depends(get_db)
+):
+    nuevo = CorteCostoProyecto(
+        proyecto_id=proyecto_id,
+        numero_corte=numero_corte,
+        porcentaje=porcentaje,
+        valor=valor
+    )
+
+    db.add(nuevo)
+    db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+@app.post("/proyectos/{proyecto_id}/cortes-costo/{corte_id}/editar")
+def editar_corte_costo(
+    proyecto_id: int,
+    corte_id: int,
+    numero_corte: int = Form(...),
+    porcentaje: float = Form(...),
+    valor: float = Form(...),
+    db: Session = Depends(get_db)
+):
+    corte = db.query(CorteCostoProyecto).get(corte_id)
+
+    if corte:
+        corte.numero_corte = numero_corte
+        corte.porcentaje = porcentaje
+        corte.valor = valor
+        db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+@app.post("/proyectos/{proyecto_id}/cortes-costo/{corte_id}/eliminar")
+def eliminar_corte_costo(
+    proyecto_id: int,
+    corte_id: int,
+    db: Session = Depends(get_db)
+):
+    corte = db.query(CorteCostoProyecto).get(corte_id)
+
+    if corte:
+        db.delete(corte)
+        db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )

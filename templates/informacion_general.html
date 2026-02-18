@@ -5,13 +5,38 @@
 
 <div class="pqr-card" style="max-width:1100px;">
 
-    <h2>Información General del Proyecto</h2>
+    <div style="text-align:center; margin-bottom:25px;">
+    <h2 style="
+        font-size:28px;
+        font-weight:700;
+        letter-spacing:0.5px;
+        margin-bottom:6px;
+    ">
+         📊 Información General del Proyecto
+    </h2>
+
+    <div style="
+        width:90px;
+        height:4px;
+        background:#9ca3af;
+        margin:0 auto;
+        border-radius:4px;
+    "></div>
+</div>
     <hr style="margin:20px 0;">
+    <div style="
+    display:flex;
+    gap:25px;
+    margin-bottom:30px;
+    justify-content:center;
+    align-items:stretch;
+    flex-wrap:wrap;
+    ">
 
     <!-- ========================= -->
     <!-- 📄 CONTRATO -->
     <!-- ========================= -->
-    <div class="pqr-card" style="margin-bottom:30px;">
+    <div class="info-card" style="width:480px;">
 
         <h4>📄 Contrato</h4>
 
@@ -115,13 +140,11 @@
                 💾 Guardar contrato
             </button>
         </form>
-
     </div>
-
     <!-- ========================= -->
     <!-- 📑 ACTA DE INICIO -->
     <!-- ========================= -->
-    <div class="pqr-card" style="margin-bottom:30px;">
+    <div class="info-card" style="width:480px;">
 
         <h4>📑 Acta de inicio</h4>
 
@@ -207,64 +230,316 @@
             </button>
         </form>
     </div>
+</div>
+</div>
+    
 
     <!-- ========================= -->
-    <!-- 💰 ANTICIPOS -->
+<!-- 💰 ANTICIPOS -->
+<!-- ========================= -->
+<div class="pqr-card" style="margin-bottom:30px;">
+    <h4>💰 Anticipos</h4>
+
+    <form method="post"
+          action="/proyectos/{{ proyecto.id }}/anticipos/nuevo"
+          style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-end;">
+
+        <div>
+            <label>Fecha</label>
+            <input type="date" name="fecha" required>
+        </div>
+
+        <div>
+            <label>Porcentaje (%)</label>
+            <input type="number" name="porcentaje" step="0.01" min="0" max="100" required>
+        </div>
+
+        <div>
+            <label>Valor</label>
+            <input type="number" name="valor" step="0.01" required>
+        </div>
+
+        <button class="btn btn-guardar">
+            ➕ Agregar
+        </button>
+    </form>
+
+    <table class="tabla" style="margin-top:15px;">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>%</th>
+                <th>Valor</th>
+                <th>Eliminar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for a in anticipos %}
+            <tr>
+                <td>{{ a.fecha }}</td>
+                <td>{{ a.porcentaje }}%</td>
+                <td>{{ a.valor | moneda }}</td>
+                <td style="text-align:center;">
+                    <form method="post"
+                          action="/proyectos/{{ proyecto.id }}/anticipos/{{ a.id }}/eliminar"
+                          onsubmit="return confirm('¿Eliminar anticipo?')">
+                        <button class="btn btn-eliminar">🗑</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4" style="text-align:center;">
+                    No hay anticipos registrados
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="margin-top:15px; font-weight:600;">
+        Total anticipado:
+        <strong>{{ total_porcentaje }}%</strong>
+        —
+        <strong>{{ total_valor | moneda }}</strong>
+    </div>
+</div>
+
     <!-- ========================= -->
-    <div class="pqr-card" style="margin-bottom:30px;">
-        <h4>💰 Anticipos</h4>
+<!-- ✂️ CORTES DE OBRA -->
+<!-- ========================= -->
+<div class="pqr-card" style="margin-bottom:30px;">
+    <h4>✂️ Avance de Obra - Tiempo</h4>
 
-        <form
-            method="post"
-            action="/proyectos/{{ proyecto.id }}/documentos/nuevo"
-            enctype="multipart/form-data"
-            style="display:flex; gap:20px; flex-wrap:wrap;">
+    <form method="post"
+          action="/proyectos/{{ proyecto.id }}/cortes/nuevo"
+          style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-end;">
 
-            <input type="hidden" name="tipo" value="anticipo">
+        <div>
+            <label>N° Corte</label>
+            <input type="number" name="numero_corte" required>
+        </div>
 
-            <div>
-                <label>Fecha del anticipo</label>
-                <input type="date" name="fecha" required>
-            </div>
+        <div>
+            <label>Fecha</label>
+            <input type="date" name="fecha" required>
+        </div>
 
-            <div>
-                <label>Valor del anticipo</label>
-                <input type="number" step="0.01" name="valor" required>
-            </div>
+        <div>
+            <label>Porcentaje (%)</label>
+            <input type="number" name="porcentaje" step="0.01" min="0" max="100" required>
+        </div>
 
-            <div style="width:100%;">
-                <label>Soporte del anticipo</label>
-                <input type="file" name="archivo" required>
-            </div>
+        <button class="btn btn-guardar">
+            ➕ Agregar
+        </button>
+    </form>
 
-            <button type="submit" class="btn btn-guardar">
-                ➕ Agregar anticipo
-            </button>
+    <table class="tabla" style="margin-top:15px;">
+    <thead>
+        <tr>
+            <th>Corte</th>
+            <th>Fecha</th>
+            <th>%</th>
+            <th>Acciones</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for c in cortes %}
+        <tr>
+
+            <form method="post"
+                  action="/proyectos/{{ proyecto.id }}/cortes/{{ c.id }}/editar">
+
+                <!-- 🔢 Número corte -->
+                <td>
+                    <input type="number"
+                           name="numero_corte"
+                           value="{{ c.numero_corte }}"
+                           style="width:70px;"
+                           readonly
+                           class="campo-corte-{{ c.id }}">
+                </td>
+
+                <!-- 📅 Fecha -->
+                <td>
+                    <input type="date"
+                           name="fecha"
+                           value="{{ c.fecha }}"
+                           readonly
+                           class="campo-corte-{{ c.id }}">
+                </td>
+
+                <!-- 📊 Porcentaje -->
+                <td>
+                    <input type="number"
+                           name="porcentaje"
+                           value="{{ c.porcentaje }}"
+                           step="0.01"
+                           style="width:80px;"
+                           readonly
+                           class="campo-corte-{{ c.id }}">
+                </td>
+
+                <!-- ⚙️ Acciones -->
+                <td style="display:flex; gap:5px;">
+
+                    <!-- ✏️ EDITAR -->
+                    <button type="button"
+                            class="btn btn-editar"
+                            onclick="habilitarEdicion({{ c.id }})">
+                        ✏️
+                    </button>
+
+                    <!-- 💾 GUARDAR -->
+                    <button type="submit"
+                            class="btn btn-guardar guardar-{{ c.id }}"
+                            style="display:none;">
+                        💾
+                    </button>
+            </form>
+
+                    <!-- 🗑 ELIMINAR -->
+                    <form method="post"
+                          action="/proyectos/{{ proyecto.id }}/cortes/{{ c.id }}/eliminar"
+                          onsubmit="return confirm('¿Eliminar corte?')">
+
+                        <button class="btn btn-eliminar">🗑</button>
+                    </form>
+
+                </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4" style="text-align:center;">
+                No hay cortes registrados
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<!-- ========================= -->
+<!-- 💰 AVANCE DE OBRA - COSTO -->
+<!-- ========================= -->
+<div class="pqr-card" style="margin-bottom:30px;">
+    <h4>💰 Avance de Obra - Costo</h4>
+
+    <form method="post"
+          action="/proyectos/{{ proyecto.id }}/cortes-costo/nuevo"
+          style="display:flex; gap:20px; flex-wrap:wrap; align-items:flex-end;">
+
+        <div>
+            <label>N° Corte</label>
+            <input type="number" name="numero_corte" required>
+        </div>
+
+        <div>
+            <label>Porcentaje (%)</label>
+            <input type="number" name="porcentaje" step="0.01" required>
+        </div>
+
+        <div>
+            <label>Valor</label>
+            <input type="number" name="valor" step="0.01" required>
+        </div>
+
+        <button class="btn btn-guardar">➕ Agregar</button>
+    </form>
+
+    <table class="tabla" style="margin-top:15px;">
+<thead>
+<tr>
+    <th>Corte</th>
+    <th>%</th>
+    <th>Valor</th>
+    <th>Acciones</th>
+</tr>
+</thead>
+<tbody>
+{% for c in cortes_costo %}
+<tr>
+
+<form method="post"
+      action="/proyectos/{{ proyecto.id }}/cortes-costo/{{ c.id }}/editar">
+
+    <!-- Corte -->
+    <td>
+        <input type="number"
+               name="numero_corte"
+               value="{{ c.numero_corte }}"
+               readonly
+               class="campo-costo-{{ c.id }}"
+               style="width:70px;">
+    </td>
+
+    <!-- Porcentaje -->
+    <td>
+        <input type="number"
+               name="porcentaje"
+               value="{{ c.porcentaje }}"
+               readonly
+               step="0.01"
+               class="campo-costo-{{ c.id }}"
+               style="width:80px;">
+    </td>
+
+    <!-- Valor -->
+    <td>
+        <!-- valor bonito -->
+        <div class="valor-formateado">
+        {{ c.valor | moneda }}
+        </div>
+
+        <!-- input para editar -->
+        <input type="number"
+            name="valor"
+            value="{{ c.valor }}"
+                readonly
+                step="0.01"
+                class="campo-costo-{{ c.id }}"
+                style="width:110px; display:none;">
+    </td>
+
+
+    <td style="display:flex; gap:5px;">
+
+        <!-- ✏️ EDITAR -->
+        <button type="button"
+                class="btn btn-editar"
+                onclick="habilitarEdicionCosto({{ c.id }})">
+            ✏️
+        </button>
+
+        <!-- 💾 GUARDAR -->
+        <button type="submit"
+                class="btn btn-guardar guardar-costo-{{ c.id }}"
+                style="display:none;">
+            💾
+        </button>
+</form>
+
+        <!-- 🗑 ELIMINAR -->
+        <form method="post"
+              action="/proyectos/{{ proyecto.id }}/cortes-costo/{{ c.id }}/eliminar"
+              onsubmit="return confirm('¿Eliminar registro?')">
+
+            <button class="btn btn-eliminar">🗑</button>
         </form>
 
-        <table class="tabla" style="margin-top:15px;">
-            <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Valor</th>
-                    <th>Soporte</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for d in documentos if d.tipo == 'anticipo' %}
-                <tr>
-                    <td>{{ d.fecha }}</td>
-                    <td>{{ d.valor | moneda }}</td>
-                    <td><a href="{{ d.archivo }}" target="_blank">📄 Ver</a></td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="3" style="text-align:center;">No hay anticipos registrados</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    </td>
+</tr>
+{% else %}
+<tr>
+<td colspan="4" style="text-align:center;">
+No hay registros
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
 
     <!-- ========================= -->
     <!-- 🛡 PÓLIZAS -->
@@ -354,7 +629,7 @@
     <!-- ✂️ CORTES -->
     <!-- ========================= -->
     <div class="pqr-card">
-        <h4>✂️ Cortes</h4>
+        <h4>✂️ Documentación Cortes</h4>
 
         <form
             method="post"
@@ -398,6 +673,83 @@
             </tbody>
         </table>
     </div>
+
+
+<!-- ========================= -->
+<!-- 🌧️ HORAS PERDIDAS POR LLUVIA -->
+<!-- ========================= -->
+<div class="pqr-card" style="margin-bottom:30px;">
+    <h4>🌧️ Horas perdidas por lluvia</h4>
+
+    <form method="post"
+          action="/proyectos/{{ proyecto.id }}/lluvia"
+          style="display:flex; gap:20px; flex-wrap:wrap;">
+
+        <div>
+            <label>Hora inicio</label>
+            <input type="time" name="hora_inicio" required>
+        </div>
+
+        <div>
+            <label>Hora fin</label>
+            <input type="time" name="hora_fin" required>
+        </div>
+
+        <div>
+            <label>Observación</label>
+            <input type="text" name="observacion" placeholder="Ej: lluvia fuerte">
+        </div>
+
+        <button class="btn btn-guardar">➕ Registrar</button>
+    </form>
+
+    <table class="tabla" style="margin-top:15px;">
+        <thead>
+            <tr>
+                <th>Inicio</th>
+                <th>Fin</th>
+                <th>Horas</th>
+                <th>Observación</th>
+                <th>Eliminar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for l in lluvias %}
+            <tr>
+                <td>{{ l.hora_inicio }}</td>
+                <td>{{ l.hora_fin }}</td>
+                <td>
+                {% if l.hora_inicio and l.hora_fin %}
+                    {% set minutos = ((l.hora_fin.hour*60 + l.hora_fin.minute) -
+                        (l.hora_inicio.hour*60 + l.hora_inicio.minute)) %}
+                    {{ minutos // 60 }}h {{ minutos % 60 }}m
+                {% else %}
+                    —
+                {% endif %}
+                </td>
+                <td>{{ l.observacion or "—" }}</td>
+                <td style="text-align:center;">
+                    <form method="post"
+                          action="/proyectos/{{ proyecto.id }}/lluvias/{{ l.id }}/eliminar"
+                          onsubmit="return confirm('¿Eliminar registro?')">
+                        <button class="btn btn-eliminar">🗑</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align:center;">
+                    No hay registros de lluvia
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="margin-top:15px; font-weight:600;">
+        Total horas perdidas: 🌧️ <strong>{{ total_horas_lluvia }}</strong>
+    </div>
+</div>
 
 <!-- ========================= -->
 <!-- 🏢 ENTREGA DE APARTAMENTOS -->
@@ -526,6 +878,36 @@ function mostrarEdicionContrato() {
 
 function mostrarEdicionActa() {
     document.getElementById("form-acta").style.display = "flex";
+}
+
+function habilitarEdicion(id) {
+    const campos = document.querySelectorAll(".campo-corte-" + id);
+    const botonGuardar = document.querySelector(".guardar-" + id);
+
+    campos.forEach(campo => {
+        campo.removeAttribute("readonly");
+        campo.style.background = "#fff";
+        campo.style.border = "1px solid #ccc";
+    });
+
+    botonGuardar.style.display = "inline-block";
+}
+
+function habilitarEdicionCosto(id) {
+    const campos = document.querySelectorAll(".campo-costo-" + id);
+    const botonGuardar = document.querySelector(".guardar-costo-" + id);
+
+    campos.forEach(campo => {
+        campo.removeAttribute("readonly");
+        campo.style.display = "inline-block";
+    });
+
+    // ocultar valor formateado
+    document.querySelectorAll(".valor-formateado").forEach(v => {
+        v.style.display = "none";
+    });
+
+    botonGuardar.style.display = "inline-block";
 }
 </script>
 

@@ -8,12 +8,15 @@
 
     <!-- HEADER -->
     <div class="pqr-header" style="display:flex; justify-content:space-between; align-items:center;">
-        <h2>PQR – Peticiones, Quejas y Reclamos</h2>
+        <div style="text-align:center; margin-bottom:25px;">
+    <h2 style="margin:0; font-weight:600;">📨 Peticiones, Quejas y Reclamos</h2>
+    <div style="width:60px;height:4px;background:#6b7280;margin:8px auto 0;border-radius:4px;"></div>
+</div>
 
         <button
             type="button"
             class="btn btn-guardar"
-            onclick="togglePQRForm()">
+            onclick="nuevoPQR()">
             ➕ Agregar PQR
         </button>
     </div>
@@ -110,27 +113,55 @@
         <tbody>
             {% for pqr in pqr_list %}
             <tr>
-                <td>{{ pqr.fecha_requerimiento }}</td>
+                <td style="white-space:nowrap;">
+                    {{ pqr.fecha_requerimiento }}
+                </td>
                 <td>{{ pqr.problema }}</td>
                 <td>{{ pqr.ubicacion or "—" }}</td>
-                <td>
-                    {% if pqr.estado == "cerrado" %}
-                        ✅ Cerrado
-                    {% else %}
-                        ⏳ Abierto
-                    {% endif %}
-                </td>
+                <td style="white-space:nowrap;">
+    {% if pqr.estado == "cerrado" %}
+        <span style="
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            gap:5px;
+            background:#dcfce7;
+            color:#166534;
+            padding:4px 8px;
+            border-radius:6px;
+        ">
+            🟢 Cerrado
+        </span>
+    {% else %}
+        <span style="
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            gap:5px;
+            background:#fef3c7;
+            color:#92400e;
+            padding:4px 8px;
+            border-radius:6px;
+        ">
+            🟡 Pendiente
+        </span>
+    {% endif %}
+</td>
+
                 <td>{{ pqr.fecha_solucion or "—" }}</td>
                 <td>
-                    <a
-                        href="/proyectos/{{ proyecto.id }}/pqr/editar/{{ pqr.id }}"
+                    {% if pqr.estado != "cerrado" %}
+                        <a href="/proyectos/{{ proyecto.id }}/pqr/editar/{{ pqr.id }}"
                         class="btn btn-editar">
-                        {% if pqr.estado == "abierto" %}
-                            ✏️ Editar
-                        {% else %}
-                            👁️ Ver
-                        {% endif %}
-                    </a>
+                        ✏️ Editar
+                        </a>
+                    {% else %}
+                        <a href="/proyectos/{{ proyecto.id }}/pqr/editar/{{ pqr.id }}"
+                        class="btn btn-editar"
+                        style="background:#e5e7eb; color:#374151;">
+                        👁️ Ver
+                        </a>
+                    {% endif %}
                 </td>
             </tr>
             {% else %}
@@ -147,9 +178,16 @@
 
 <!-- JS -->
 <script>
-function togglePQRForm() {
+function nuevoPQR() {
+
+    // mostrar formulario
     const form = document.getElementById("form-pqr-container");
-    form.style.display = form.style.display === "none" ? "block" : "none";
+    form.style.display = "block";
+
+    // limpiar URL para salir del modo edición
+    if (window.location.href.includes("/editar/")) {
+        window.location.href = window.location.pathname.replace(/\/editar\/\d+/, "");
+    }
 }
 </script>
 

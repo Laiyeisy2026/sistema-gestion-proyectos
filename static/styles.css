@@ -788,3 +788,77 @@ td.acciones {
     font-size: 13px;
     margin-top: 5px;
 }
+
+.fila-docs{
+    display:flex;
+    gap:25px;
+}
+
+.fila-docs .pqr-card{
+    flex:1;
+}
+
+/* 📱 responsive */
+@media (max-width:768px){
+    .fila-docs{
+        flex-direction:column;
+    }
+}
+
+.info-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:25px;
+    margin-top:20px;
+}
+
+.info-card{
+    background:#ffffff;
+    border-radius:12px;
+    padding:25px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.06);
+}
+
+.info-grid-elegante{
+    display:flex;
+    gap:25px;
+    align-items:stretch;
+    margin-bottom:30px;
+}
+
+.info-card{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+}
+
+.info-card {
+    flex: 1;
+    text-align: center;   /* centra texto */
+}
+
+.info-card .doc-box {
+    margin: 10px auto;    /* centra el recuadro del documento */
+}
+
+.info-card button {
+    margin: 10px auto 0 auto; /* centra botones */
+    display: block;
+}
+
+.titulo-seccion {
+    text-align: center;
+    font-size: 26px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 5px;
+}
+.linea-seccion {
+    width: 80px;
+    height: 4px;
+    background: #3b82f6;
+    border: none;
+    margin: 10px auto 25px auto;
+    border-radius: 4px;
+}

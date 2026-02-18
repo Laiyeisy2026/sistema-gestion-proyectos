@@ -55,6 +55,8 @@ class Tarea(Base):
     nivel_real = Column(Integer)
     id_padre = Column(Integer)
 
+    posicion = Column(Integer, default=0)
+
     # Duración
     duracion_texto = Column(Text)
     duracion_dias = Column(Integer)
@@ -188,10 +190,6 @@ class DocumentoProyecto(Base):
     archivo = Column(String(255))               # ruta del archivo
     creado_en = Column(DateTime, default=datetime.now)
 
-from database import Base
-from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy.orm import relationship
-
 class TorreProyecto(Base):
     __tablename__ = "torre_apartamentos"
 
@@ -206,3 +204,48 @@ class TorreProyecto(Base):
         "Proyecto",
         back_populates="torres"
         )
+
+from sqlalchemy import Time
+
+class LluviaProyecto(Base):
+    __tablename__ = "lluvias_proyecto"
+
+    id = Column(Integer, primary_key=True, index=True)
+    proyecto_id = Column(Integer, ForeignKey("proyecto.id"))
+
+    hora_inicio = Column(Time, nullable=False)
+    hora_fin = Column(Time, nullable=False)
+
+    observacion = Column(String, nullable=True)
+
+from sqlalchemy import Column, Integer, Date, ForeignKey, Numeric
+from database import Base
+
+class AnticipoProyecto(Base):
+    __tablename__ = "anticipos_proyecto"
+
+    id = Column(Integer, primary_key=True, index=True)
+    proyecto_id = Column(Integer, ForeignKey("proyecto.id"), nullable=False)
+
+    fecha = Column(Date, nullable=False)
+    porcentaje = Column(Numeric(5,2), nullable=False)
+    valor = Column(Numeric(14,2), nullable=False)
+
+class CorteProyecto(Base):
+    __tablename__ = "cortes_proyecto"
+
+    id = Column(Integer, primary_key=True, index=True)
+    proyecto_id = Column(Integer, ForeignKey("proyecto.id"), nullable=False)
+
+    numero_corte = Column(Integer, nullable=False)
+    fecha = Column(Date, nullable=False)
+    porcentaje = Column(Numeric(5,2), nullable=False)
+
+class CorteCostoProyecto(Base):
+    __tablename__ = "cortes_costo_proyecto"
+
+    id = Column(Integer, primary_key=True, index=True)
+    proyecto_id = Column(Integer, ForeignKey("proyecto.id"))
+    numero_corte = Column(Integer, nullable=False)
+    porcentaje = Column(Numeric(5,2), nullable=False)
+    valor = Column(Numeric(14,2), nullable=False)

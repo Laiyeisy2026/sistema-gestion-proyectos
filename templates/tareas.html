@@ -2,7 +2,12 @@
 
 {% block content %}
 
-<h2>Actividades</h2>
+<div class="pqr-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="text-align:center; margin-bottom:25px;">
+    <h2 style="margin:0; font-weight:600;">🏗 Actividades</h2>
+    <div style="width:60px;height:4px;background:#6b7280;margin:8px auto 0;border-radius:4px;"></div>
+</div>
+    </div>
 
 <hr>
 
@@ -21,6 +26,8 @@
       action="/proyectos/{{ proyecto.id }}/tareas/nueva"
       class="form-tarea">
 {% endif %}
+
+    <input type="hidden" name="id_padre" value="">
 
     <label>Nombre</label>
     <input type="text"
@@ -152,19 +159,19 @@
         {% if item.variacion_dias is not none %}
             {% if item.variacion_dias < 0 %}
                 <span style="color: green;">
-                    {{ item.tarea.fecha_fin_real }}
+                    {{ item.tarea.fecha_fin_real.date() }}
                 </span>
             {% elif item.variacion_dias > 0 %}
                 <span style="color: red;">
-                    {{ item.tarea.fecha_fin_real }}
+                    {{ item.tarea.fecha_fin_real.date() }}
                 </span>
             {% else %}
                 <span style="color: orange;">
-                    {{ item.tarea.fecha_fin_real }}
+                    {{ item.tarea.fecha_fin_real.date() }}
                 </span>
             {% endif %}
         {% else %}
-            {{ item.tarea.fecha_fin_real }}
+            {{ item.tarea.fecha_fin_real.date() }}
         {% endif %}
     {% else %}
         —
@@ -207,11 +214,39 @@
        onclick="return confirm('¿Eliminar tarea?');">
         🗑 Eliminar
     </a>
+    {% if item.tarea.tipo != "PRINCIPAL" %}
+    <a href="/proyectos/{{ proyecto.id }}/tareas/nueva?hija_de={{ item.tarea.id }}"
+        class="btn btn-nuevo">
+        ➕
+    </a>
+    {% endif %}
+
 </td>
         </td>
     </tr>
     {% endfor %}
     </tbody>
+
+<tfoot>
+<tr style="font-weight:bold; background:#f5f5f5;">
+    <td colspan="5" style="text-align:right;">
+        Variación total del proyecto:
+    </td>
+
+    <td>
+        {% if total_variacion > 0 %}
+            <span style="color:red;">+{{ total_variacion }} días</span>
+        {% elif total_variacion < 0 %}
+            <span style="color:green;">{{ total_variacion }} días</span>
+        {% else %}
+            0 días
+        {% endif %}
+    </td>
+
+    <td colspan="6"></td>
+</tr>
+</tfoot>
+
 </table>
 
 {% endblock %}
