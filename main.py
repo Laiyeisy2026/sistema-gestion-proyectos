@@ -2017,11 +2017,14 @@ def guardar_archivo_supabase(
 
     contenido = archivo.file.read()
 
+    # ✅ asegurar content-type válido
+    content_type = archivo.content_type or "application/octet-stream"
+
     supabase.storage.from_(SUPABASE_BUCKET).upload(
         ruta_storage,
         contenido,
         {
-            "content-type": archivo.content_type or "application/octet-stream"
+            "content-type": str(content_type)
         }
     )
 
