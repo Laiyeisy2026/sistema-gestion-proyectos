@@ -622,7 +622,8 @@ def editar_tarea(
             "request": request,
             "proyecto": proyecto,          # 🔴 CLAVE
             "tareas": tareas_wbs,
-            "tarea_editando": tarea        # 🔴 CLAVE
+            "tarea_editando": tarea,
+            "total_variacion": 0       # 🔴 CLAVE
         }
     )
 
@@ -2020,7 +2021,7 @@ def guardar_archivo_supabase(
         ruta_storage,
         contenido,
         {
-            "content-type": archivo.content_type
+            "content-type": archivo.content_type or "application/octet-stream"
         }
     )
 
