@@ -208,7 +208,7 @@ class TorreProyecto(Base):
 from sqlalchemy import Time
 
 class LluviaProyecto(Base):
-    __tablename__ = "lluvias_proyecto"
+    __tablename__ = "lluvia_proyecto"
 
     id = Column(Integer, primary_key=True, index=True)
     proyecto_id = Column(Integer, ForeignKey("proyecto.id"))
