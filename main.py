@@ -2333,48 +2333,6 @@ def parse_date(fecha_str):
     except ValueError:
         return None
 
-def guardar_archivo_supabase(
-    proyecto_id: int,
-    archivo: UploadFile,
-    subcarpeta: str
-) -> str | None:
-    """
-    Sube un archivo a Supabase Storage y retorna la URL pública
-    Ruta: documentos/proyecto_{id}/{subcarpeta}/uuid.ext
-    """
-
-    if not archivo or not archivo.filename:
-        return None
-
-    # extensión
-    ext = os.path.splitext(archivo.filename)[1]
-
-    # nombre único
-    nombre_archivo = f"{uuid.uuid4()}{ext}"
-
-    # ruta en el bucket
-    ruta_storage = f"proyecto_{proyecto_id}/{subcarpeta}/{nombre_archivo}"
-
-    # leer contenido
-    contenido = archivo.file.read()
-
-    # subir a Supabase
-    supabase.storage.from_(SUPABASE_BUCKET).upload(
-        ruta_storage,
-        contenido,
-        file_options={
-            "content-type": archivo.content_type,
-            "upsert": True
-        }
-    )
-
-    # obtener URL pública
-    url_publica = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(
-        ruta_storage
-    )
-
-    return url_publica
-
 @app.get("/test-email")
 def test_email():
     mensaje = Mail(
