@@ -2017,22 +2017,16 @@ def guardar_archivo_supabase(
 
     contenido = archivo.file.read()
 
-    # ✅ asegurar content-type válido
-    content_type = archivo.content_type or "application/octet-stream"
-
     supabase.storage.from_(SUPABASE_BUCKET).upload(
         ruta_storage,
         contenido,
-        {
-            "content-type": str(content_type)
+        file_options={
+            "content-type": archivo.content_type or "application/octet-stream",
+            "upsert": "true"   # ✅ FIX
         }
     )
 
-    url_publica = supabase.storage.from_(SUPABASE_BUCKET).get_public_url(
-        ruta_storage
-    )
-
-    return url_publica
+    return supabase.storage.from_(SUPABASE_BUCKET).get_public_url(ruta_storage)
 
 from fastapi import UploadFile, File
 from fastapi.responses import RedirectResponse
