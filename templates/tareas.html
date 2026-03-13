@@ -214,12 +214,10 @@
        onclick="return confirm('¿Eliminar tarea?');">
         🗑 Eliminar
     </a>
-    {% if item.tarea.tipo != "PRINCIPAL" %}
     <a href="/proyectos/{{ proyecto.id }}/tareas/nueva?hija_de={{ item.tarea.id }}"
-        class="btn btn-nuevo">
-        ➕
+    class="btn btn-nuevo">
+    ➕
     </a>
-    {% endif %}
 
 </td>
         </td>
