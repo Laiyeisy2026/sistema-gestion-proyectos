@@ -109,6 +109,11 @@ class Proyecto(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(Text, nullable=False)
     descripcion = Column(Text, nullable=True)
+    contratista_nombre = Column(String(200), nullable=True)
+    contratista_nit = Column(String(50), nullable=True)
+    contratista_representante = Column(String(200), nullable=True)
+    contratista_telefono = Column(String(50), nullable=True)
+    contratista_correo = Column(String(150), nullable=True)
 
     fecha_inicio = Column(DateTime, nullable=True)
     fecha_fin = Column(DateTime, nullable=True)
@@ -150,9 +155,33 @@ class PQR(Base):
     solucion = Column(Text)
     ubicacion = Column(String(255))
     fecha_solucion = Column(Date)
+    observacion = Column(Text, nullable=True)
 
     estado = Column(String(20), default="abierto")
     creado_en = Column(DateTime, default=datetime.now)
+
+# =========================
+# ACTAS DE COMITÉ
+# =========================
+class ComiteProyecto(Base):
+    __tablename__ = "comite_proyecto"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    proyecto_id = Column(
+        Integer,
+        ForeignKey("proyecto.id"),
+        nullable=False
+    )
+
+    fecha = Column(Date, nullable=False)
+    titulo = Column(String(200), nullable=False)
+    documento = Column(String(255), nullable=True)
+
+    creado_en = Column(
+        DateTime,
+        default=datetime.now
+    )
 
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey
 from datetime import datetime
@@ -199,6 +228,7 @@ class TorreProyecto(Base):
     nombre_torre = Column(String, nullable=False)
     cantidad_apartamentos = Column(Integer, nullable=False)
     apartamentos_entregados = Column(Integer, default=0)
+    observaciones = Column(Text, nullable=True)
 
     proyecto = relationship(
         "Proyecto",
@@ -215,6 +245,7 @@ class LluviaProyecto(Base):
 
     hora_inicio = Column(Time, nullable=False)
     hora_fin = Column(Time, nullable=False)
+    fecha = Column(Date, nullable=True)
 
     observacion = Column(String, nullable=True)
 
@@ -249,3 +280,49 @@ class CorteCostoProyecto(Base):
     numero_corte = Column(Integer, nullable=False)
     porcentaje = Column(Numeric(5,2), nullable=False)
     valor = Column(Numeric(14,2), nullable=False)
+
+
+# =========================
+# BITÁCORA DEL PROYECTO
+# =========================
+class Bitacora(Base):
+    __tablename__ = "bitacora"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    proyecto_id = Column(
+        Integer,
+        ForeignKey("proyecto.id"),
+        nullable=False
+    )
+
+    fecha = Column(Date, nullable=False)
+    personal = Column(String(20), nullable=False)
+    actividades = Column(Text, nullable=False)
+    observaciones = Column(Text, nullable=True)
+
+
+# =========================
+# INFORMES DE COMITÉ
+# =========================
+class InformeComite(Base):
+    __tablename__ = "informe_comite"
+
+    id = Column(Integer, primary_key=True, index=True)
+    proyecto_id = Column(Integer, ForeignKey("proyecto.id"), nullable=False)
+    fecha = Column(Date, nullable=False)
+    titulo = Column(String(200), nullable=False)
+    documento = Column(String(255), nullable=True)
+
+
+# =========================
+# MEMORIA DE CÁLCULO
+# =========================
+class MemoriaCalculo(Base):
+    __tablename__ = "memoria_calculo"
+
+    id = Column(Integer, primary_key=True, index=True)
+    proyecto_id = Column(Integer, ForeignKey("proyecto.id"), nullable=False)
+    fecha = Column(Date, nullable=False)
+    titulo = Column(String(200), nullable=False)
+    documento = Column(String(255), nullable=True)

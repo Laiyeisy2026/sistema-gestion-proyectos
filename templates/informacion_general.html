@@ -25,13 +25,246 @@
 </div>
     <hr style="margin:20px 0;">
     <div style="
+        display:flex;
+        flex-direction:column;
+        gap:25px;
+        margin-bottom:30px;
+        align-items:center;
+    ">
+
+<!-- ========================= -->
+<!-- 👷 DATOS DEL CONTRATISTA -->
+<!-- ========================= -->
+<div class="info-card" style="
+    width:480px;
+    box-sizing:border-box;
+">
+
+    <h4 style="
+        text-align:center;
+        margin-bottom:20px;
+    ">
+        👷 Datos del contratista
+    </h4>
+
+    <form
+        method="post"
+        action="/proyectos/{{ proyecto.id }}/informacion"
+        style="
+            display:grid;
+            grid-template-columns:1.5fr 1fr;
+            gap:16px;
+            margin-top:10px;
+        "
+    >
+
+        <!-- NOMBRE / RAZÓN SOCIAL -->
+        <div style="
+            display:flex;
+            flex-direction:column;
+            gap:6px;
+        ">
+
+            <label style="
+                font-weight:600;
+                font-size:13px;
+                color:#374151;
+            ">
+                Nombre / Razón social
+            </label>
+
+            <input
+                type="text"
+                name="contratista_nombre"
+                value="{{ proyecto.contratista_nombre or '' }}"
+                placeholder="Nombre del contratista"
+                style="
+                    width:100%;
+                    height:36px;
+                    box-sizing:border-box;
+                    padding:8px 10px;
+                    border:1px solid #d1d5db;
+                    border-radius:6px;
+                    font-family:inherit;
+                    font-size:13px;
+                "
+            >
+
+        </div>
+
+
+        <!-- NIT -->
+        <div style="
+            display:flex;
+            flex-direction:column;
+            gap:6px;
+        ">
+
+            <label style="
+                font-weight:600;
+                font-size:13px;
+                color:#374151;
+            ">
+                NIT
+            </label>
+
+            <input
+                type="text"
+                name="contratista_nit"
+                value="{{ proyecto.contratista_nit or '' }}"
+                placeholder="NIT"
+                style="
+                    width:100%;
+                    height:36px;
+                    box-sizing:border-box;
+                    padding:8px 10px;
+                    border:1px solid #d1d5db;
+                    border-radius:6px;
+                    font-family:inherit;
+                    font-size:13px;
+                "
+            >
+
+        </div>
+
+
+        <!-- REPRESENTANTE LEGAL -->
+        <div style="
+            display:flex;
+            flex-direction:column;
+            gap:6px;
+        ">
+
+            <label style="
+                font-weight:600;
+                font-size:13px;
+                color:#374151;
+            ">
+                Representante legal
+            </label>
+
+            <input
+                type="text"
+                name="contratista_representante"
+                value="{{ proyecto.contratista_representante or '' }}"
+                placeholder="Nombre del representante"
+                style="
+                    width:100%;
+                    height:36px;
+                    box-sizing:border-box;
+                    padding:8px 10px;
+                    border:1px solid #d1d5db;
+                    border-radius:6px;
+                    font-family:inherit;
+                    font-size:13px;
+                "
+            >
+
+        </div>
+
+
+        <!-- TELÉFONO -->
+        <div style="
+            display:flex;
+            flex-direction:column;
+            gap:6px;
+        ">
+
+            <label style="
+                font-weight:600;
+                font-size:13px;
+                color:#374151;
+            ">
+                Teléfono
+            </label>
+
+            <input
+                type="text"
+                name="contratista_telefono"
+                value="{{ proyecto.contratista_telefono or '' }}"
+                placeholder="Número de teléfono"
+                style="
+                    width:100%;
+                    height:36px;
+                    box-sizing:border-box;
+                    padding:8px 10px;
+                    border:1px solid #d1d5db;
+                    border-radius:6px;
+                    font-family:inherit;
+                    font-size:13px;
+                "
+            >
+
+        </div>
+
+
+        <!-- CORREO -->
+        <div style="
+            grid-column:1 / -1;
+            display:flex;
+            flex-direction:column;
+            gap:6px;
+        ">
+
+            <label style="
+                font-weight:600;
+                font-size:13px;
+                color:#374151;
+            ">
+                Correo electrónico
+            </label>
+
+            <input
+                type="email"
+                name="contratista_correo"
+                value="{{ proyecto.contratista_correo or '' }}"
+                placeholder="correo@empresa.com"
+                style="
+                    width:100%;
+                    height:36px;
+                    box-sizing:border-box;
+                    padding:8px 10px;
+                    border:1px solid #d1d5db;
+                    border-radius:6px;
+                    font-family:inherit;
+                    font-size:13px;
+                "
+            >
+
+        </div>
+
+
+        <!-- BOTÓN -->
+        <div style="
+            grid-column:1 / -1;
+            display:flex;
+            justify-content:center;
+            margin-top:4px;
+        ">
+
+            <button
+                type="submit"
+                class="btn btn-guardar"
+                style="
+                    min-width:110px;
+                "
+            >
+                💾 Guardar
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+<div style="
     display:flex;
     gap:25px;
-    margin-bottom:30px;
     justify-content:center;
-    align-items:stretch;
+    width:100%;
     flex-wrap:wrap;
-    ">
+">
 
     <!-- ========================= -->
     <!-- 📄 CONTRATO -->
@@ -232,7 +465,362 @@
     </div>
 </div>
 </div>
-    
+
+<!-- ========================= -->
+<!-- 📋 ACTAS DE COMITÉ -->
+<!-- ========================= -->
+<div class="pqr-card" style="margin-bottom:30px;">
+
+    <h4>📋 Actas de Comité</h4>
+
+
+<form
+    action="/proyectos/{{ proyecto.id }}/comites/nuevo"
+    method="post"
+    enctype="multipart/form-data"
+    style="margin-top:20px;"
+>
+    <div style="
+        display:grid;
+        grid-template-columns: minmax(180px, 0.7fr) minmax(250px, 1.8fr);
+        gap:20px;
+        margin-bottom:20px;
+    ">
+        <div>
+            <label style="display:block; font-weight:600; margin-bottom:7px;">
+                Fecha del comité
+            </label>
+            <input
+                type="date"
+                name="fecha"
+                required
+                style="width:100%; box-sizing:border-box;"
+            >
+        </div>
+
+        <div>
+            <label style="display:block; font-weight:600; margin-bottom:7px;">
+                Título del acta
+            </label>
+            <input
+                type="text"
+                name="titulo"
+                placeholder="Ej. Comité de seguimiento No. 1"
+                required
+                style="width:100%; box-sizing:border-box;"
+            >
+        </div>
+    </div>
+
+    <div style="
+        padding:18px;
+        background:#f8fafc;
+        border:1px dashed #cbd5e1;
+        border-radius:8px;
+        margin-bottom:20px;
+    ">
+        <label style="display:block; font-weight:600; margin-bottom:8px;">
+            📎 Documento del acta
+        </label>
+
+        <input
+            type="file"
+            name="documento"
+            accept=".pdf,.doc,.docx"
+            style="width:100%;"
+        >
+
+        <small style="display:block; color:#64748b; margin-top:8px;">
+            Formatos permitidos: PDF, DOC y DOCX.
+        </small>
+    </div>
+
+    <button type="submit" class="btn btn-guardar">
+        ➕ Agregar acta
+    </button>
+</form>
+
+{% if comites %}
+    <hr style="margin:25px 0;">
+
+    <h5>Actas registradas</h5>
+
+    <table class="tabla" style="margin-top:15px;">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Título</th>
+                <th>Documento</th>
+                <th>Eliminar</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for comite in comites %}
+                <tr>
+                    <td>{{ comite.fecha.strftime('%d/%m/%Y') }}</td>
+
+                    <td>{{ comite.titulo }}</td>
+
+                    <td>
+                        {% if comite.documento %}
+                            <a href="/{{ comite.documento.lstrip('/') }}" target="_blank" rel="noopener noreferrer">📎 Ver documento</a>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td style="text-align:center;">
+                        <form
+                            action="/proyectos/{{ proyecto.id }}/comites/{{ comite.id }}/eliminar"
+                            method="post"
+                            onsubmit="return confirm('¿Estás segura de que deseas eliminar esta acta?');"
+                        >
+                <button type="submit" class="btn btn-eliminar" title="Eliminar acta">
+                🗑️
+            </button>
+</form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+{% else %}
+    <p style="color:#777; font-size:14px;">
+        No hay actas de comité registradas.
+    </p>
+{% endif %}
+
+</div>
+
+<!-- ========================= -->
+<!-- 📋 INFORMES DE COMITÉ -->
+<!-- ========================= -->
+<div class="pqr-card" style="margin-bottom:30px;">
+
+    <h4>📑 Informes de comité</h4>
+
+    <form
+        action="/proyectos/{{ proyecto.id }}/informes-comite/nuevo"
+        method="post"
+        enctype="multipart/form-data"
+        style="margin-top:20px;"
+    >
+        <div style="
+            display:grid;
+            grid-template-columns:minmax(180px, 0.7fr) minmax(250px, 1.8fr);
+            gap:20px;
+            margin-bottom:20px;
+        ">
+            <div>
+                <label style="display:block; font-weight:600; margin-bottom:7px;">
+                    Fecha del informe
+                </label>
+                <input type="date" name="fecha" required
+                       style="width:100%; box-sizing:border-box;">
+            </div>
+
+            <div>
+                <label style="display:block; font-weight:600; margin-bottom:7px;">
+                    Título del informe
+                </label>
+                <input type="text" name="titulo"
+                       placeholder="Ej. Informe de comité No. 1"
+                       required
+                       style="width:100%; box-sizing:border-box;">
+            </div>
+        </div>
+
+        <div style="
+            padding:18px;
+            background:#f8fafc;
+            border:1px dashed #cbd5e1;
+            border-radius:8px;
+            margin-bottom:20px;
+        ">
+            <label style="display:block; font-weight:600; margin-bottom:8px;">
+                📎 Documento del informe
+            </label>
+            <input type="file" name="documento"
+                   accept=".pdf,.doc,.docx"
+                   style="width:100%;">
+            <small style="display:block; color:#64748b; margin-top:8px;">
+                Formatos permitidos: PDF, DOC y DOCX.
+            </small>
+        </div>
+
+        <button type="submit" class="btn btn-guardar">
+            ➕ Agregar informe
+        </button>
+    </form>
+
+    {% if informes_comite %}
+        <hr style="margin:25px 0;">
+        <h5>Informes registrados</h5>
+
+        <table class="tabla" style="margin-top:15px;">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Título</th>
+                    <th>Documento</th>
+                    <th>Eliminar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for informe in informes_comite %}
+                    <tr>
+                        <td>{{ informe.fecha.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ informe.titulo }}</td>
+                        <td>
+                            {% if informe.documento %}
+                                <a href="/{{ informe.documento.lstrip('/') }}"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    📎 Ver documento
+                                </a>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td style="text-align:center;">
+                            <form
+                                action="/proyectos/{{ proyecto.id }}/informes-comite/{{ informe.id }}/eliminar"
+                                method="post"
+                                onsubmit="return confirm('¿Estás segura de que deseas eliminar este informe?');"
+                            >
+                                <button type="submit" class="btn btn-eliminar"
+                                        title="Eliminar informe">
+                                    🗑️
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="color:#777; font-size:14px;">
+            No hay informes de comité registrados.
+        </p>
+    {% endif %}
+
+</div>
+
+<!-- ========================= -->
+<!-- 🧮 MEMORIA DE CÁLCULO -->
+<!-- ========================= -->
+<div class="pqr-card" style="margin-bottom:30px;">
+
+    <h4>🧮 Memoria de cálculo</h4>
+
+    <form
+        action="/proyectos/{{ proyecto.id }}/memorias-calculo/nuevo"
+        method="post"
+        enctype="multipart/form-data"
+        style="margin-top:20px;"
+    >
+        <div style="
+            display:grid;
+            grid-template-columns:minmax(180px, 0.7fr) minmax(250px, 1.8fr);
+            gap:20px;
+            margin-bottom:20px;
+        ">
+            <div>
+                <label style="display:block; font-weight:600; margin-bottom:7px;">
+                    Fecha
+                </label>
+                <input type="date" name="fecha" required
+                       style="width:100%; box-sizing:border-box;">
+            </div>
+
+            <div>
+                <label style="display:block; font-weight:600; margin-bottom:7px;">
+                    Título de la memoria
+                </label>
+                <input type="text" name="titulo"
+                       placeholder="Ej. Memoria de cálculo de cantidades"
+                       required
+                       style="width:100%; box-sizing:border-box;">
+            </div>
+        </div>
+
+        <div style="
+            padding:18px;
+            background:#f8fafc;
+            border:1px dashed #cbd5e1;
+            border-radius:8px;
+            margin-bottom:20px;
+        ">
+            <label style="display:block; font-weight:600; margin-bottom:8px;">
+                📎 Documento de la memoria de cálculo
+            </label>
+            <input type="file" name="documento"
+                   accept=".pdf,.doc,.docx"
+                   style="width:100%;">
+            <small style="display:block; color:#64748b; margin-top:8px;">
+                Formatos permitidos: PDF, DOC y DOCX.
+            </small>
+        </div>
+
+        <button type="submit" class="btn btn-guardar">
+            ➕ Agregar memoria
+        </button>
+    </form>
+
+    {% if memorias_calculo %}
+        <hr style="margin:25px 0;">
+        <h5>Memorias de cálculo registradas</h5>
+
+        <table class="tabla" style="margin-top:15px;">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Título</th>
+                    <th>Documento</th>
+                    <th>Eliminar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for memoria in memorias_calculo %}
+                    <tr>
+                        <td>{{ memoria.fecha.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ memoria.titulo }}</td>
+                        <td>
+                            {% if memoria.documento %}
+                                <a href="/{{ memoria.documento.lstrip('/') }}"
+                                   target="_blank"
+                                   rel="noopener noreferrer">
+                                    📎 Ver documento
+                                </a>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td style="text-align:center;">
+                            <form
+                                action="/proyectos/{{ proyecto.id }}/memorias-calculo/{{ memoria.id }}/eliminar"
+                                method="post"
+                                onsubmit="return confirm('¿Estás segura de que deseas eliminar esta memoria de cálculo?');"
+                            >
+                                <button type="submit" class="btn btn-eliminar"
+                                        title="Eliminar memoria">
+                                    🗑️
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p style="color:#777; font-size:14px;">
+            No hay memorias de cálculo registradas.
+        </p>
+    {% endif %}
+
+</div>
 
     <!-- ========================= -->
 <!-- 💰 ANTICIPOS -->
@@ -620,7 +1208,7 @@ No hay registros
         No hay pólizas registradas
     </td>
 </tr>
-{% endfor %}         
+{% endfor %}
             </tbody>
         </table>
     </div>
@@ -675,6 +1263,7 @@ No hay registros
     </div>
 
 
+
 <!-- ========================= -->
 <!-- 🌧️ HORAS PERDIDAS POR LLUVIA -->
 <!-- ========================= -->
@@ -683,7 +1272,12 @@ No hay registros
 
     <form method="post"
           action="/proyectos/{{ proyecto.id }}/lluvia"
-          style="display:flex; gap:20px; flex-wrap:wrap;">
+          style="display:flex; gap:20px; flex-wrap:wrap; align-items:end;">
+
+        <div>
+            <label>Fecha</label>
+            <input type="date" name="fecha" required>
+        </div>
 
         <div>
             <label>Hora inicio</label>
@@ -697,15 +1291,19 @@ No hay registros
 
         <div>
             <label>Observación</label>
-            <input type="text" name="observacion" placeholder="Ej: lluvia fuerte">
+            <input type="text" name="observacion"
+                   placeholder="Ej: lluvia fuerte">
         </div>
 
-        <button class="btn btn-guardar">➕ Registrar</button>
+        <button type="submit" class="btn btn-guardar">
+            ➕ Registrar
+        </button>
     </form>
 
-    <table class="tabla" style="margin-top:15px;">
+    <table class="tabla" style="margin-top:15px; width:100%;">
         <thead>
             <tr>
+                <th>Fecha</th>
                 <th>Inicio</th>
                 <th>Fin</th>
                 <th>Horas</th>
@@ -716,29 +1314,37 @@ No hay registros
         <tbody>
             {% for l in lluvias %}
             <tr>
-                <td>{{ l.hora_inicio }}</td>
-                <td>{{ l.hora_fin }}</td>
                 <td>
-                {% if l.hora_inicio and l.hora_fin %}
-                    {% set minutos = ((l.hora_fin.hour*60 + l.hora_fin.minute) -
-                        (l.hora_inicio.hour*60 + l.hora_inicio.minute)) %}
-                    {{ minutos // 60 }}h {{ minutos % 60 }}m
-                {% else %}
-                    —
-                {% endif %}
+                    {{ l.fecha.strftime('%d/%m/%Y') if l.fecha else '—' }}
+                </td>
+                <td>{{ l.hora_inicio.strftime('%H:%M') if l.hora_inicio else '—' }}</td>
+                <td>{{ l.hora_fin.strftime('%H:%M') if l.hora_fin else '—' }}</td>
+                <td>
+                    {% if l.hora_inicio and l.hora_fin %}
+                        {% set minutos = ((l.hora_fin.hour * 60 + l.hora_fin.minute) -
+                            (l.hora_inicio.hour * 60 + l.hora_inicio.minute)) %}
+                        {% if minutos < 0 %}
+                            {% set minutos = minutos + 1440 %}
+                        {% endif %}
+                        {{ minutos // 60 }}h {{ minutos % 60 }}m
+                    {% else %}
+                        —
+                    {% endif %}
                 </td>
                 <td>{{ l.observacion or "—" }}</td>
                 <td style="text-align:center;">
                     <form method="post"
                           action="/proyectos/{{ proyecto.id }}/lluvias/{{ l.id }}/eliminar"
                           onsubmit="return confirm('¿Eliminar registro?')">
-                        <button class="btn btn-eliminar">🗑</button>
+                        <button type="submit" class="btn btn-eliminar">
+                            🗑
+                        </button>
                     </form>
                 </td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="5" style="text-align:center;">
+                <td colspan="6" style="text-align:center;">
                     No hay registros de lluvia
                 </td>
             </tr>
@@ -747,7 +1353,8 @@ No hay registros
     </table>
 
     <div style="margin-top:15px; font-weight:600;">
-        Total horas perdidas: 🌧️ <strong>{{ total_horas_lluvia }}</strong>
+        Total horas perdidas: 🌧️
+        <strong>{{ total_horas_lluvia }}</strong>
     </div>
 </div>
 
@@ -759,28 +1366,116 @@ No hay registros
     <h4>🏢 Entrega de apartamentos</h4>
 
     <!-- ➕ CREAR TORRE -->
-    <form method="post"
-          action="/proyectos/{{ proyecto.id }}/torres/nueva"
-          style="display:flex; gap:20px; flex-wrap:wrap;
-                 margin-top:15px; margin-bottom:25px; align-items:flex-end;">
 
-        <div>
-            <label>Nombre de la torre</label>
-            <input type="text" name="nombre_torre" placeholder="Torre 1" required>
-        </div>
+<!-- DEFINIR CANTIDAD DE TORRES -->
+<div style="margin-top:15px; margin-bottom:20px;">
+    <label for="cantidad_torres"><strong>Cantidad de torres del proyecto</strong></label>
 
-        <div>
-            <label>Cantidad de apartamentos</label>
-            <input type="number" name="cantidad_apartamentos" min="1" placeholder="48" required>
-        </div>
+    <div style="display:flex; gap:10px; align-items:center; margin-top:8px;">
+        <input
+            type="number"
+            id="cantidad_torres"
+            min="1"
+            max="100"
+            value="1"
+            style="width:100px;"
+        >
 
-        <button type="submit" class="btn btn-guardar">
-            ➕ Agregar torre
+        <button
+            type="button"
+            class="btn btn-guardar"
+            onclick="generarFilasTorres()">
+            Generar torres
         </button>
-    </form>
+    </div>
+</div>
 
-    <!-- 📊 TABLA -->
-    <table class="tabla">
+<!-- FORMULARIO DE VARIAS TORRES -->
+<form
+    id="formulario-torres"
+    method="post"
+    action="/proyectos/{{ proyecto.id }}/torres/crear-multiples">
+
+    <div id="contenedor-torres"></div>
+
+    <button
+        type="submit"
+        id="btn-guardar-torres"
+        class="btn btn-guardar"
+        style="display:none; margin-top:15px;">
+        💾 Guardar torres
+    </button>
+</form>
+
+<script>
+function generarFilasTorres() {
+    const cantidad = parseInt(
+        document.getElementById("cantidad_torres").value,
+        10
+    );
+
+    const contenedor = document.getElementById("contenedor-torres");
+    const botonGuardar = document.getElementById("btn-guardar-torres");
+
+    if (!Number.isInteger(cantidad) || cantidad < 1 || cantidad > 100) {
+        alert("Ingresa una cantidad de torres entre 1 y 100.");
+        return;
+    }
+
+    contenedor.innerHTML = "";
+
+    for (let i = 1; i <= cantidad; i++) {
+        const fila = document.createElement("div");
+
+        fila.style.cssText =
+            "display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); " +
+            "gap:12px; padding:15px; margin-bottom:10px; " +
+            "border:1px solid #ddd; border-radius:8px;";
+
+        fila.innerHTML = `
+            <div>
+                <label>Nombre de la torre ${i}</label>
+                <input
+                    type="text"
+                    name="nombre_torre"
+                    value="Torre ${i}"
+                    maxlength="100"
+                    required
+                    style="width:100%; box-sizing:border-box;">
+            </div>
+
+            <div>
+                <label>Cantidad de apartamentos</label>
+                <input
+                    type="number"
+                    name="cantidad_apartamentos"
+                    min="1"
+                    required
+                    placeholder="Ej. 48"
+                    style="width:100%; box-sizing:border-box;">
+            </div>
+
+            <div>
+                <label>Observaciones</label>
+                <input
+                    type="text"
+                    name="observaciones"
+                    maxlength="1000"
+                    placeholder="Observaciones de la torre"
+                    style="width:100%; box-sizing:border-box;">
+            </div>
+        `;
+
+        contenedor.appendChild(fila);
+    }
+
+    botonGuardar.style.display = "inline-block";
+}
+</script>
+
+<!-- 📊 TABLA -->
+<div style="width:100%; overflow-x:auto; margin-top:15px;">
+    <table class="tabla" style="width:100%; border-collapse:collapse;">
         <thead>
             <tr>
                 <th>Torre</th>
@@ -788,10 +1483,11 @@ No hay registros
                 <th>Apartamentos entregados</th>
                 <th>Actualizar</th>
                 <th>Eliminar</th>
+                <th>Observaciones</th>
             </tr>
         </thead>
-        <tbody>
 
+        <tbody>
             {% for t in torres %}
             <tr>
                 <td>{{ t.nombre_torre }}</td>
@@ -800,38 +1496,64 @@ No hay registros
                     {{ t.cantidad_apartamentos }}
                 </td>
 
-                <!-- ✏️ ACTUALIZAR -->
-                <td>
+                <!-- CANTIDAD ENTREGADA -->
+                <td style="text-align:center;">
                     <form method="post"
                           action="/proyectos/{{ proyecto.id }}/torres/{{ t.id }}/editar"
-                          style="display:flex; gap:10px; justify-content:center; align-items:center;">
+                          style="margin:0;">
                         <input
                             type="number"
                             name="apartamentos_entregados"
                             min="0"
                             max="{{ t.cantidad_apartamentos }}"
                             value="{{ t.apartamentos_entregados }}"
-                            style="width:80px;">
-                        <button class="btn btn-guardar" style="padding:4px 10px;">
+                            required
+                            style="width:75px;">
+                </td>
+
+                <!-- ACTUALIZAR -->
+                <td style="text-align:center;">
+                        <button type="submit"
+                                class="btn btn-guardar"
+                                style="padding:4px 10px;">
                             💾
                         </button>
                     </form>
                 </td>
 
-                <td style="text-align:center;">
-                    {{ t.apartamentos_entregados }}
-                </td>
-
-                <!-- 🗑 ELIMINAR -->
+                <!-- ELIMINAR -->
                 <td style="text-align:center;">
                     <form method="post"
                           action="/proyectos/{{ proyecto.id }}/torres/{{ t.id }}/eliminar"
-                          onsubmit="return confirm('¿Seguro que deseas eliminar esta torre? Esta acción no se puede deshacer.')">
-                        <button
-                            type="submit"
-                            class="btn btn-eliminar"
-                            style="padding:4px 10px;">
+                          style="margin:0;"
+                          onsubmit="return confirm('¿Seguro que deseas eliminar esta torre? Esta acción no se puede deshacer.');">
+                        <button type="submit"
+                                class="btn btn-eliminar"
+                                style="padding:4px 10px;">
                             🗑
+                        </button>
+                    </form>
+                </td>
+
+                <!-- OBSERVACIONES -->
+                <td>
+                    <form method="post"
+                          action="/proyectos/{{ proyecto.id }}/torres/{{ t.id }}/observaciones"
+                          style="display:flex; gap:6px; align-items:center; margin:0;">
+                        <input
+                            type="text"
+                            name="observaciones"
+                            value="{{ t.observaciones or '' }}"
+                            placeholder="Escribir observación"
+                            maxlength="1000"
+                            readonly
+                            style="width:160px;">
+
+                        <button type="button"
+                                class="btn btn-guardar"
+                                style="padding:4px 10px;"
+                                onclick="const campo=this.form.querySelector('input[name=observaciones]'); if(campo.hasAttribute('readonly')) { campo.removeAttribute('readonly'); campo.focus(); this.textContent='💾'; } else { this.form.submit(); }">
+                            ✏️
                         </button>
                     </form>
                 </td>
@@ -839,14 +1561,14 @@ No hay registros
 
             {% else %}
             <tr>
-                <td colspan="5" style="text-align:center;">
+                <td colspan="6" style="text-align:center;">
                     No hay torres registradas
                 </td>
             </tr>
             {% endfor %}
-
         </tbody>
     </table>
+</div>
 
     <!-- 🔢 RESUMEN -->
     <div style="margin-top:20px; padding:15px; background:#f8f9fa;
@@ -874,6 +1596,11 @@ No hay registros
 <script>
 function mostrarEdicionContrato() {
     document.getElementById("form-contrato").style.display = "flex";
+}
+
+function mostrarEdicionContratista() {
+    document.getElementById("form-contratista").style.display = "flex";
+    document.getElementById("datos-contratista-lectura").style.display = "none";
 }
 
 function mostrarEdicionActa() {

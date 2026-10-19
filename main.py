@@ -20,8 +20,14 @@ import uuid
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
+from pathlib import Path
+
 from dotenv import load_dotenv
-from supabase import create_client
+
+import requests
+from urllib.parse import quote
+
+load_dotenv()
 
 from decimal import Decimal
 
@@ -30,50 +36,187 @@ from models import (
     Base, Proyecto, Operario, Tarea, AsignacionOperario,
     FaseRecurso, PQR, TorreProyecto,
     DocumentoProyecto, PolizaProyecto, LluviaProyecto,
-    AnticipoProyecto, CorteProyecto, CorteCostoProyecto
+    AnticipoProyecto, CorteProyecto, CorteCostoProyecto, ComiteProyecto,
+    Bitacora, InformeComite, MemoriaCalculo
 )
 
-# =========================
-# ENV & SUPABASE
-# =========================
-load_dotenv()
-
-print("SENDGRID_API_KEY:", os.getenv("SENDGRID_API_KEY"))
-print("SENDGRID_FROM_EMAIL:", os.getenv("SENDGRID_FROM_EMAIL"))
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "documentos")
-
-if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
-    raise RuntimeError("Supabase env vars no configuradas")
-
-supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-
 app = FastAPI()
+
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
+
+UPLOADS_DIR = Path(__file__).resolve().parent / "uploads"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+app.mount(
+    "/uploads",
+    StaticFiles(directory=str(UPLOADS_DIR)),
+    name="uploads"
+)
+
+
+# =========================
+# CONEXIÓN CON ONEDRIVE
+# =========================
+
+MS_TENANT_ID = os.getenv("MS_TENANT_ID")
+MS_CLIENT_ID = os.getenv("MS_CLIENT_ID")
+MS_CLIENT_SECRET = os.getenv("MS_CLIENT_SECRET")
+ONEDRIVE_USER = os.getenv("ONEDRIVE_USER")
+ONEDRIVE_ROOT_FOLDER = os.getenv(
+    "ONEDRIVE_ROOT_FOLDER",
+    "INTERVENTORIA_APP"
+)
+
+
+def obtener_token_onedrive():
+    """Obtiene un token de acceso para Microsoft Graph."""
+
+    if not all([
+        MS_TENANT_ID,
+        MS_CLIENT_ID,
+        MS_CLIENT_SECRET,
+        ONEDRIVE_USER
+    ]):
+        raise RuntimeError(
+            "Faltan variables de configuración de OneDrive en .env"
+        )
+
+    respuesta = requests.post(
+        f"https://login.microsoftonline.com/"
+        f"{MS_TENANT_ID}/oauth2/v2.0/token",
+        data={
+            "client_id": MS_CLIENT_ID,
+            "client_secret": MS_CLIENT_SECRET,
+            "scope": "https://graph.microsoft.com/.default",
+            "grant_type": "client_credentials"
+        },
+        timeout=30
+    )
+
+    if respuesta.status_code != 200:
+        raise RuntimeError(
+            f"Error de autenticación OneDrive: {respuesta.text}"
+        )
+
+    return respuesta.json()["access_token"]
+
+
+def subir_archivo_onedrive(
+    archivo,
+    nombre_archivo,
+    carpeta="PROYECTOS"
+):
+    """Sube un archivo a la carpeta configurada de OneDrive."""
+
+    token = obtener_token_onedrive()
+
+    ruta = (
+        f"{ONEDRIVE_ROOT_FOLDER}/"
+        f"{carpeta}/{nombre_archivo}"
+    )
+
+    ruta_codificada = "/".join(
+        quote(parte, safe="")
+        for parte in ruta.split("/")
+    )
+    respuesta = requests.put(
+        "https://graph.microsoft.com/v1.0/users/"
+        f"{quote(ONEDRIVE_USER, safe='')}/drive/root:"
+        f"/{ruta_codificada}:/content",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/octet-stream"
+        },
+        data=archivo,
+        timeout=120
+    )
+
+    if respuesta.status_code not in (200, 201):
+        raise RuntimeError(
+            f"Error al subir archivo a OneDrive: {respuesta.text}"
+        )
+
+    return respuesta.json()["id"]
 
 @app.on_event("startup")
 def startup():
     print("App iniciando correctamente")
 
+
+from fastapi.responses import Response
+
+
+@app.get("/onedrive/files/{item_id}")
+def consultar_archivo_onedrive(
+    item_id: str,
+    request: Request
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redi
+    """Recupera un archivo privado de OneDrive."""
+
+    token = obtener_token_onedrive()
+
+    respuesta = requests.get(
+        "https://graph.microsoft.com/v1.0/users/"
+        f"{quote(ONEDRIVE_USER, safe='')}/drive/items/"
+        f"{quote(item_id, safe='')}/content",
+        headers={
+            "Authorization": f"Bearer {token}"
+        },
+        allow_redirects=True,
+        timeout=120,
+    )
+
+    if respuesta.status_code != 200:
+        raise HTTPException(
+            status_code=respuesta.status_code,
+            detail="No fue posible consultar el archivo en OneDrive.",
+        )
+
+    return Response(
+        content=respuesta.content,
+        media_type=respuesta.headers.get(
+            "Content-Type",
+            "application/octet-stream",
+        ),
+        headers={
+            "Content-Disposition": "inline"
+        },
+    )
+
 # =========================
 # USUARIOS (LOGIN SIMPLE)
 # =========================
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
+
+INTERVENTORIA_USERNAME = os.getenv("INTERVENTORIA_USERNAME")
+INTERVENTORIA_PASSWORD = os.getenv("INTERVENTORIA_PASSWORD")
+
+SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY")
+
+if not all([
+    ADMIN_USERNAME,
+    ADMIN_PASSWORD,
+    INTERVENTORIA_USERNAME,
+    INTERVENTORIA_PASSWORD,
+    SESSION_SECRET_KEY
+]):
+    raise RuntimeError("Faltan variables de seguridad en el archivo .env")
+
 USUARIOS = {
-    "AdminLaiyeisy": {
-        "password": "Violeta2026**"
+    ADMIN_USERNAME: {
+        "password": ADMIN_PASSWORD
     },
-    "interventoria2026": {
-        "password": "Obras2026#"
+    INTERVENTORIA_USERNAME: {
+        "password": INTERVENTORIA_PASSWORD
     }
 }
 
-import os
-
 def enviar_alerta_tarea(tarea, proyecto):
-
-    print("SENDGRID_API_KEY:", os.getenv("SENDGRID_API_KEY"))
-    print("SENDGRID_FROM_EMAIL:", os.getenv("SENDGRID_FROM_EMAIL"))
 
     mensaje = Mail(
         from_email=os.getenv("SENDGRID_FROM_EMAIL"),
@@ -107,7 +250,7 @@ os.makedirs("static/dashboards", exist_ok=True)
 
 app.add_middleware(
     SessionMiddleware,
-    secret_key="clave-super-secreta-cambiala",
+    secret_key=SESSION_SECRET_KEY,
     max_age=60 * 60,
     same_site="lax",
     https_only=False
@@ -314,7 +457,7 @@ def dashboard_proyecto(
     redir = verificar_sesion(request)
     if redir:
         return redir
-    
+
     proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
 
     if not proyecto:
@@ -462,7 +605,7 @@ def ver_tareas_proyecto(
 
     for item in generar_wbs_project(tareas):
         tarea_item = item["tarea"]
-    
+
         item["estado_cumplimiento"] = calcular_estado_cumplimiento(tarea_item)
         item["valor_avance"] = calcular_valor_avance(tarea_item)
         item["variacion_dias"] = calcular_variacion_dias(tarea_item)
@@ -473,7 +616,7 @@ def ver_tareas_proyecto(
 
         item["fin_plan"] = to_date(tarea_item.fecha_fin)
         item["fin_real"] = to_date(tarea_item.fecha_fin_real)
-    
+
         tareas_wbs.append(item)
 
     return templates.TemplateResponse(
@@ -1778,19 +1921,30 @@ def editar_pqr(
         }
     )
 
+
 @app.post("/proyectos/{proyecto_id}/pqr/editar/{pqr_id}")
 def actualizar_pqr(
     proyecto_id: int,
     pqr_id: int,
+    request: Request,
     solucion: str = Form(None),
     fecha_solucion: str = Form(None),
+    observacion: str = Form(None),
     db: Session = Depends(get_db)
 ):
-    pqr = db.query(PQR).get(pqr_id)
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    pqr = db.query(PQR).filter(
+        PQR.id == pqr_id,
+        PQR.proyecto_id == proyecto_id
+    ).first()
 
     if pqr:
         pqr.solucion = solucion
-        pqr.fecha_solucion = fecha_solucion
+        pqr.fecha_solucion = parse_date(fecha_solucion) if fecha_solucion else None
+        pqr.observacion = observacion
 
         if pqr.fecha_solucion:
             pqr.estado = "cerrado"
@@ -1813,6 +1967,7 @@ def guardar_pqr(
     solucion: str = Form(None),
     ubicacion: str = Form(None),
     fecha_solucion: str = Form(None),
+    observacion: str = Form(None),
     db: Session = Depends(get_db)
 ):
     redir = verificar_sesion(request)
@@ -1827,14 +1982,14 @@ def guardar_pqr(
         problema=problema,
         solucion=solucion,
         ubicacion=ubicacion,
-        fecha_solucion = fecha_solucion or None,
+        fecha_solucion=fecha_solucion or None,
+        observacion=observacion,
         estado=estado
     )
 
     db.add(pqr)
     db.commit()
 
-    # ✅ REDIRECT CORRECTO
     return RedirectResponse(
         f"/proyectos/{proyecto_id}/pqr",
         status_code=303
@@ -1868,7 +2023,7 @@ def informacion_general(
     ).all()
 
     polizas_data = []
-    
+
     for p in polizas:
         polizas_data.append({
             "poliza": p,
@@ -1902,6 +2057,18 @@ def informacion_general(
         if total_apartamentos > 0 else 0
     )
 
+    comites = db.query(ComiteProyecto).filter(
+        ComiteProyecto.proyecto_id == proyecto_id
+    ).order_by(ComiteProyecto.fecha.desc()).all()
+
+    informes_comite = db.query(InformeComite).filter(
+        InformeComite.proyecto_id == proyecto_id
+    ).order_by(InformeComite.fecha.desc()).all()
+
+    memorias_calculo = db.query(MemoriaCalculo).filter(
+        MemoriaCalculo.proyecto_id == proyecto_id
+    ).order_by(MemoriaCalculo.fecha.desc()).all()
+
     # ✂️ CORTES
     cortes = db.query(CorteProyecto)\
         .filter(CorteProyecto.proyecto_id == proyecto_id)\
@@ -1914,30 +2081,34 @@ def informacion_general(
         .order_by(CorteCostoProyecto.numero_corte)\
         .all()
 
-    # 🌧️ LLUVIAS
-    lluvias = db.query(LluviaProyecto)\
-        .filter(LluviaProyecto.proyecto_id == proyecto_id)\
-        .order_by(LluviaProyecto.hora_inicio.desc())\
+
+# 🌧️ LLUVIAS
+    lluvias = (
+        db.query(LluviaProyecto)
+        .filter(LluviaProyecto.proyecto_id == proyecto_id)
+        .order_by(
+            LluviaProyecto.fecha.desc(),
+            LluviaProyecto.hora_inicio.desc()
+        )
         .all()
+    )
 
     total_lluvias = len(lluvias)
 
-    from datetime import datetime, date
-
-    total_horas_lluvia = 0
+    total_minutos = 0
 
     for l in lluvias:
         if l.hora_inicio and l.hora_fin:
             inicio = datetime.combine(date.today(), l.hora_inicio)
             fin = datetime.combine(date.today(), l.hora_fin)
 
-            if fin > inicio:
-                horas = (fin - inicio).total_seconds() / 3600
-                total_horas_lluvia += horas
+            diferencia = (fin - inicio).total_seconds()
 
-    # convertir a minutos totales
-    # convertir a minutos totales
-    total_minutos = round(total_horas_lluvia * 60)
+            # Si la hora final es menor, se asume que terminó al día siguiente
+            if diferencia < 0:
+                diferencia += 24 * 3600
+
+            total_minutos += round(diferencia / 60)
 
     horas = total_minutos // 60
     minutos = total_minutos % 60
@@ -1962,7 +2133,10 @@ def informacion_general(
             "total_entregados": total_entregados,
             "porcentaje_entregados": porcentaje_entregados,
             "lluvias": lluvias,
-            "total_horas_lluvia": total_horas_lluvia
+            "total_horas_lluvia": total_horas_lluvia,
+            "comites": comites,
+            "informes_comite": informes_comite,
+            "memorias_calculo": memorias_calculo
         }
     )
 
@@ -1972,6 +2146,11 @@ def guardar_informacion_general(
     proyecto_id: int,
     request: Request,
     fecha_firma_contrato: str | None = Form(None),
+    contratista_nombre: str | None = Form(None),
+    contratista_nit: str | None = Form(None),
+    contratista_representante: str | None = Form(None),
+    contratista_telefono: str | None = Form(None),
+    contratista_correo: str | None = Form(None),
     anticipo_fecha: str | None = Form(None),
     anticipo_valor: float | None = Form(None),
     poliza_inicio: str | None = Form(None),
@@ -1982,13 +2161,18 @@ def guardar_informacion_general(
     redir = verificar_sesion(request)
     if redir:
         return redir
-   
+
     proyecto = db.query(Proyecto).filter(Proyecto.id == proyecto_id).first()
 
     if not proyecto:
         return RedirectResponse("/", status_code=303)
 
     proyecto.fecha_firma_contrato = fecha_firma_contrato or None
+    proyecto.contratista_nombre = contratista_nombre or None
+    proyecto.contratista_nit = contratista_nit or None
+    proyecto.contratista_representante = contratista_representante or None
+    proyecto.contratista_telefono = contratista_telefono or None
+    proyecto.contratista_correo = contratista_correo or None
     proyecto.anticipo_fecha = anticipo_fecha or None
     proyecto.anticipo_valor = anticipo_valor
     proyecto.poliza_inicio = poliza_inicio or None
@@ -2001,6 +2185,280 @@ def guardar_informacion_general(
         status_code=303
     )
 
+@app.post("/proyectos/{proyecto_id}/comites/nuevo")
+def agregar_comite(
+    proyecto_id: int,
+    request: Request,
+    fecha: str = Form(...),
+    titulo: str = Form(...),
+    documento: UploadFile = File(None),
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    proyecto = db.query(Proyecto).filter(
+        Proyecto.id == proyecto_id
+    ).first()
+
+    if not proyecto:
+        return RedirectResponse("/", status_code=303)
+
+    url_documento = None
+
+    if documento and documento.filename:
+        url_documento = guardar_archivo_supabase(
+            proyecto_id,
+            documento,
+            "actas_comite"
+        )
+
+    nuevo_comite = ComiteProyecto(
+        proyecto_id=proyecto_id,
+        fecha=fecha,
+        titulo=titulo,
+        documento=url_documento
+    )
+
+    db.add(nuevo_comite)
+    db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+
+@app.post("/proyectos/{proyecto_id}/comites/{comite_id}/eliminar")
+def eliminar_comite(
+    proyecto_id: int,
+    comite_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    comite = db.query(ComiteProyecto).filter(
+        ComiteProyecto.id == comite_id,
+        ComiteProyecto.proyecto_id == proyecto_id
+    ).first()
+
+    if comite:
+        db.delete(comite)
+        db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+@app.post("/proyectos/{proyecto_id}/informes-comite/nuevo")
+def agregar_informe_comite(
+    proyecto_id: int,
+    request: Request,
+    fecha: str = Form(...),
+    titulo: str = Form(...),
+    documento: UploadFile = File(None),
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    url_documento = None
+
+    if documento and documento.filename:
+        url_documento = guardar_archivo_supabase(
+            proyecto_id, documento, "informes_comite"
+        )
+
+    nuevo = InformeComite(
+        proyecto_id=proyecto_id,
+        fecha=fecha,
+        titulo=titulo,
+        documento=url_documento
+    )
+
+    db.add(nuevo)
+    db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+
+@app.post("/proyectos/{proyecto_id}/memorias-calculo/nuevo")
+def agregar_memoria_calculo(
+    proyecto_id: int,
+    request: Request,
+    fecha: str = Form(...),
+    titulo: str = Form(...),
+    documento: UploadFile = File(None),
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    url_documento = None
+
+    if documento and documento.filename:
+        url_documento = guardar_archivo_supabase(
+            proyecto_id, documento, "memorias_calculo"
+        )
+
+    nueva = MemoriaCalculo(
+        proyecto_id=proyecto_id,
+        fecha=fecha,
+        titulo=titulo,
+        documento=url_documento
+    )
+
+    db.add(nueva)
+    db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+@app.post("/proyectos/{proyecto_id}/informes-comite/{informe_id}/eliminar")
+def eliminar_informe_comite(
+    proyecto_id: int,
+    informe_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    informe = db.query(InformeComite).filter(
+        InformeComite.id == informe_id,
+        InformeComite.proyecto_id == proyecto_id
+    ).first()
+
+    if informe:
+        db.delete(informe)
+        db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+
+@app.post("/proyectos/{proyecto_id}/memorias-calculo/{memoria_id}/eliminar")
+def eliminar_memoria_calculo(
+    proyecto_id: int,
+    memoria_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    memoria = db.query(MemoriaCalculo).filter(
+        MemoriaCalculo.id == memoria_id,
+        MemoriaCalculo.proyecto_id == proyecto_id
+    ).first()
+
+    if memoria:
+        db.delete(memoria)
+        db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+
+def obtener_o_crear_carpeta_proyecto(token, proyecto_id):
+    """Obtiene o crea la carpeta de un proyecto en OneDrive."""
+
+    from urllib.parse import quote
+
+    encabezados = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    carpeta_base = (
+        f"{ONEDRIVE_ROOT_FOLDER}/PROYECTOS"
+    )
+
+    nombre_carpeta = f"Proyecto_{proyecto_id}"
+
+    ruta_carpeta = (
+        f"{carpeta_base}/{nombre_carpeta}"
+    )
+
+    ruta_codificada = "/".join(
+        quote(parte, safe="")
+        for parte in ruta_carpeta.split("/")
+    )
+
+    url_carpeta = (
+        "https://graph.microsoft.com/v1.0/users/"
+        f"{quote(ONEDRIVE_USER, safe='')}/drive/root:"
+        f"/{ruta_codificada}"
+    )
+
+    # Verificar si la carpeta ya existe
+    respuesta = requests.get(
+        url_carpeta,
+        headers=encabezados,
+        timeout=30
+    )
+
+    if respuesta.status_code == 200:
+        return f"PROYECTOS/{nombre_carpeta}"
+
+    if respuesta.status_code != 404:
+        raise RuntimeError(
+            "Error al consultar la carpeta en OneDrive: "
+            f"{respuesta.status_code} - {respuesta.text}"
+        )
+
+    # Crear la carpeta si todavía no existe
+    ruta_base_codificada = "/".join(
+        quote(parte, safe="")
+        for parte in carpeta_base.split("/")
+    )
+
+    url_padre = (
+        "https://graph.microsoft.com/v1.0/users/"
+        f"{quote(ONEDRIVE_USER, safe='')}/drive/root:"
+        f"/{ruta_base_codificada}:/children"
+    )
+
+    respuesta = requests.post(
+        url_padre,
+        headers={
+            **encabezados,
+            "Content-Type": "application/json"
+        },
+        json={
+            "name": nombre_carpeta,
+            "folder": {},
+            "@microsoft.graph.conflictBehavior": "fail"
+        },
+        timeout=30
+    )
+
+    if respuesta.status_code not in (200, 201):
+        raise RuntimeError(
+            "Error al crear la carpeta del proyecto en OneDrive: "
+            f"{respuesta.status_code} - {respuesta.text}"
+        )
+
+    return f"PROYECTOS/{nombre_carpeta}"
+
+
 def guardar_archivo_supabase(
     proyecto_id: int,
     archivo: UploadFile,
@@ -2010,23 +2468,59 @@ def guardar_archivo_supabase(
     if not archivo or not archivo.filename:
         return None
 
-    ext = os.path.splitext(archivo.filename)[1]
-    nombre_archivo = f"{uuid.uuid4()}{ext}"
+    import os
+    import uuid
+    from urllib.parse import quote
 
-    ruta_storage = f"proyecto_{proyecto_id}/{subcarpeta}/{nombre_archivo}"
+    # Conservar la extensión del archivo
+    extension = os.path.splitext(archivo.filename)[1]
+    nombre_archivo = f"{uuid.uuid4()}{extension}"
 
-    contenido = archivo.file.read()
-
-    supabase.storage.from_(SUPABASE_BUCKET).upload(
-        ruta_storage,
-        contenido,
-        file_options={
-            "content-type": archivo.content_type or "application/octet-stream",
-            "upsert": "true"   # ✅ FIX
-        }
+    # Obtener o crear la carpeta del proyecto en OneDrive
+    token = obtener_token_onedrive()
+    carpeta_onedrive = obtener_o_crear_carpeta_proyecto(
+        token,
+        proyecto_id
     )
 
-    return supabase.storage.from_(SUPABASE_BUCKET).get_public_url(ruta_storage)
+    # Construir la ruta completa
+    ruta = (
+        f"{ONEDRIVE_ROOT_FOLDER}/"
+        f"{carpeta_onedrive}/{nombre_archivo}"
+    )
+
+    ruta_codificada = "/".join(
+        quote(parte, safe="")
+        for parte in ruta.split("/")
+    )
+
+    # Subir el archivo a OneDrive
+    archivo.file.seek(0)
+
+    respuesta = requests.put(
+        "https://graph.microsoft.com/v1.0/users/"
+        f"{quote(ONEDRIVE_USER, safe='')}/drive/root:"
+        f"/{ruta_codificada}:/content",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": (
+                archivo.content_type
+                or "application/octet-stream"
+            ),
+        },
+        data=archivo.file,
+        timeout=120,
+    )
+
+    if respuesta.status_code not in (200, 201):
+        raise RuntimeError(
+            "Error al guardar el documento en OneDrive: "
+            f"{respuesta.status_code} - {respuesta.text}"
+        )
+
+    # Devolver la ruta interna para abrir el archivo desde la aplicación
+    archivo_subido = respuesta.json()
+    return f"/onedrive/files/{archivo_subido['id']}"
 
 from fastapi import UploadFile, File
 from fastapi.responses import RedirectResponse
@@ -2042,7 +2536,7 @@ def guardar_contrato(
     contrato_archivo: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
-    
+
     redir = verificar_sesion(request)
     if redir:
         return redir
@@ -2290,6 +2784,65 @@ def eliminar_torre(
         status_code=303
     )
 
+
+@app.post("/proyectos/{proyecto_id}/torres/crear-multiples")
+def crear_torres_multiples(
+    proyecto_id: int,
+    request: Request,
+    nombre_torre: list[str] = Form(...),
+    cantidad_apartamentos: list[int] = Form(...),
+    observaciones: list[str] = Form([]),
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    if len(nombre_torre) != len(cantidad_apartamentos):
+        return RedirectResponse(
+            f"/proyectos/{proyecto_id}/informacion",
+            status_code=303
+        )
+
+    proyecto = db.query(Proyecto).filter(
+        Proyecto.id == proyecto_id
+    ).first()
+
+    if not proyecto or not nombre_torre:
+        return RedirectResponse(
+            f"/proyectos/{proyecto_id}/informacion",
+            status_code=303
+        )
+
+    for i, nombre in enumerate(nombre_torre):
+        nombre = nombre.strip()
+
+        if not nombre or cantidad_apartamentos[i] <= 0:
+            continue
+
+        observacion = (
+            observaciones[i].strip()
+            if i < len(observaciones)
+            else ""
+        )
+
+        torre = TorreProyecto(
+            proyecto_id=proyecto_id,
+            nombre_torre=nombre,
+            cantidad_apartamentos=cantidad_apartamentos[i],
+            apartamentos_entregados=0,
+            observaciones=observacion or None
+        )
+
+        db.add(torre)
+
+    db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
 from fastapi.responses import RedirectResponse
 
 @app.get("/proyectos")
@@ -2412,18 +2965,26 @@ def nueva_tarea_desde_boton(
     )
 
 from fastapi import Form
+
 from datetime import time
 
 @app.post("/proyectos/{proyecto_id}/lluvia")
 def agregar_lluvia(
     proyecto_id: int,
+    fecha: date = Form(...),
     hora_inicio: time = Form(...),
     hora_fin: time = Form(...),
     observacion: str = Form(None),
+    request: Request = None,
     db: Session = Depends(get_db)
 ):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
     lluvia = LluviaProyecto(
         proyecto_id=proyecto_id,
+        fecha=fecha,
         hora_inicio=hora_inicio,
         hora_fin=hora_fin,
         observacion=observacion
@@ -2626,4 +3187,757 @@ def eliminar_corte_costo(
     return RedirectResponse(
         f"/proyectos/{proyecto_id}/informacion",
         status_code=303
+    )
+
+
+@app.post("/proyectos/{proyecto_id}/torres/{torre_id}/observaciones")
+def guardar_observaciones_torre(
+    proyecto_id: int,
+    request: Request,
+    torre_id: int,
+    observaciones: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    torre = db.query(TorreProyecto).filter(
+        TorreProyecto.id == torre_id,
+        TorreProyecto.proyecto_id == proyecto_id
+    ).first()
+
+    if not torre:
+        return RedirectResponse(
+            f"/proyectos/{proyecto_id}/informacion",
+            status_code=303
+        )
+
+    torre.observaciones = observaciones.strip() or None
+    db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/informacion",
+        status_code=303
+    )
+
+# =====================================================
+# BITÁCORA DEL PROYECTO
+# =====================================================
+
+@app.get("/proyectos/{proyecto_id}/bitacora", response_class=HTMLResponse)
+def ver_bitacora(
+    proyecto_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    proyecto = db.query(Proyecto).filter(
+        Proyecto.id == proyecto_id
+    ).first()
+
+    if not proyecto:
+        return RedirectResponse("/", status_code=303)
+
+    registros = db.query(Bitacora).filter(
+        Bitacora.proyecto_id == proyecto_id
+    ).order_by(Bitacora.fecha.desc(), Bitacora.id.desc()).all()
+
+    return templates.TemplateResponse(
+        "bitacora.html",
+        {
+            "request": request,
+            "proyecto": proyecto,
+            "registros": registros,
+            "hoy": date.today().isoformat(),
+            "en_proyecto": True
+        }
+    )
+
+
+@app.post("/proyectos/{proyecto_id}/bitacora/nueva")
+def crear_registro_bitacora(
+    proyecto_id: int,
+    request: Request,
+    fecha: date = Form(...),
+    personal: str = Form(...),
+    actividades: str = Form(...),
+    observaciones: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    proyecto = db.query(Proyecto).filter(
+        Proyecto.id == proyecto_id
+    ).first()
+
+    if not proyecto:
+        return RedirectResponse("/", status_code=303)
+
+    if personal not in ("Administrativo", "Operativo"):
+        return RedirectResponse(
+            f"/proyectos/{proyecto_id}/bitacora",
+            status_code=303
+        )
+
+    registro = Bitacora(
+        proyecto_id=proyecto_id,
+        fecha=fecha,
+        personal=personal,
+        actividades=actividades.strip(),
+        observaciones=observaciones.strip() or None
+    )
+
+    db.add(registro)
+    db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/bitacora",
+        status_code=303
+    )
+
+
+@app.post("/proyectos/{proyecto_id}/bitacora/eliminar/{registro_id}")
+def eliminar_registro_bitacora(
+    proyecto_id: int,
+    registro_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    registro = db.query(Bitacora).filter(
+        Bitacora.id == registro_id,
+        Bitacora.proyecto_id == proyecto_id
+    ).first()
+
+    if registro:
+        db.delete(registro)
+        db.commit()
+
+    return RedirectResponse(
+        f"/proyectos/{proyecto_id}/bitacora",
+        status_code=303
+    )
+
+
+from io import BytesIO
+from xml.sax.saxutils import escape
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle,
+    Image,
+)
+
+
+@app.get("/proyectos/{proyecto_id}/resumen/pdf")
+def generar_pdf_resumen_proyecto(
+    proyecto_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    redir = verificar_sesion(request)
+    if redir:
+        return redir
+
+    proyecto = db.query(Proyecto).filter(
+        Proyecto.id == proyecto_id
+    ).first()
+
+    if not proyecto:
+        raise HTTPException(
+            status_code=404,
+            detail="Proyecto no encontrado",
+        )
+
+    tareas = db.query(Tarea).filter(
+        Tarea.proyecto_id == proyecto_id
+    ).order_by(Tarea.id).all()
+
+    documentos = db.query(DocumentoProyecto).filter(
+        DocumentoProyecto.proyecto_id == proyecto_id
+    ).order_by(DocumentoProyecto.id).all()
+
+    polizas = db.query(PolizaProyecto).filter(
+        PolizaProyecto.proyecto_id == proyecto_id
+    ).order_by(PolizaProyecto.id).all()
+
+
+    # Actas e informes de comité
+    comites = db.query(ComiteProyecto).filter(
+        ComiteProyecto.proyecto_id == proyecto_id
+    ).order_by(ComiteProyecto.fecha).all()
+
+    informes_comite = db.query(InformeComite).filter(
+        InformeComite.proyecto_id == proyecto_id
+    ).order_by(InformeComite.fecha).all()
+
+    # Bitácora del proyecto
+    bitacoras = db.query(Bitacora).filter(
+        Bitacora.proyecto_id == proyecto_id
+    ).order_by(Bitacora.fecha).all()
+
+    # Anticipos y cortes
+    anticipos = db.query(AnticipoProyecto).filter(
+        AnticipoProyecto.proyecto_id == proyecto_id
+    ).order_by(AnticipoProyecto.fecha).all()
+
+    cortes = db.query(CorteProyecto).filter(
+        CorteProyecto.proyecto_id == proyecto_id
+    ).order_by(CorteProyecto.numero_corte).all()
+
+    cortes_costos = db.query(CorteCostoProyecto).filter(
+        CorteCostoProyecto.proyecto_id == proyecto_id
+    ).order_by(CorteCostoProyecto.numero_corte).all()
+
+    # PQR
+    pqrs = db.query(PQR).filter(
+        PQR.proyecto_id == proyecto_id
+    ).order_by(PQR.fecha_requerimiento).all()
+
+    # Torres y apartamentos
+    torres = db.query(TorreProyecto).filter(
+        TorreProyecto.proyecto_id == proyecto_id
+    ).order_by(TorreProyecto.id).all()
+
+    # Registro de lluvias
+    lluvias = db.query(LluviaProyecto).filter(
+        LluviaProyecto.proyecto_id == proyecto_id
+    ).order_by(LluviaProyecto.id).all()
+
+    # Memorias de cálculo
+    memorias = db.query(MemoriaCalculo).filter(
+        MemoriaCalculo.proyecto_id == proyecto_id
+    ).order_by(MemoriaCalculo.fecha).all()
+
+    buffer = BytesIO()
+
+    pdf = SimpleDocTemplate(
+        buffer,
+        pagesize=landscape(A4),
+        rightMargin=1.5 * cm,
+        leftMargin=1.5 * cm,
+        topMargin=1.5 * cm,
+        bottomMargin=1.5 * cm,
+    )
+
+    estilos = getSampleStyleSheet()
+
+    titulo = ParagraphStyle(
+        "TituloProyecto",
+        parent=estilos["Title"],
+        alignment=TA_CENTER,
+        textColor=colors.HexColor("#4B5563"),
+        spaceAfter=18,
+    )
+
+    elementos = []
+
+
+    # LOGO DEL INFORME
+    ruta_logo = Path(__file__).resolve().parent / "static" / "logo.jpeg"
+
+    if ruta_logo.exists():
+        logo = Image(str(ruta_logo), width=3.5 * cm, height=1.5 * cm)
+        logo.hAlign = "CENTER"
+        elementos.append(logo)
+        elementos.append(Spacer(1, 10))
+
+    def texto(valor):
+        if valor is None or str(valor).strip() == "":
+            return "No registrado"
+        return escape(str(valor))
+
+    def fecha(valor):
+        if not valor:
+            return "No registrada"
+        if hasattr(valor, "strftime"):
+            return valor.strftime("%d/%m/%Y")
+        return texto(valor)
+
+    def agregar_tabla(encabezados, filas):
+        datos = [
+            [Paragraph(f"<b>{texto(c)}</b>", estilos["BodyText"])
+             for c in encabezados]
+        ]
+
+        for fila in filas:
+            datos.append([
+                Paragraph(texto(c), estilos["BodyText"])
+                for c in fila
+            ])
+
+        tabla = Table(
+            datos,
+            repeatRows=1,
+            hAlign="LEFT",
+        )
+
+        tabla.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0),
+             colors.HexColor("#666666")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 6),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+
+        elementos.append(tabla)
+        elementos.append(Spacer(1, 12))
+
+    elementos.append(Paragraph(
+        "RESUMEN GENERAL DEL PROYECTO",
+        titulo,
+    ))
+
+    elementos.append(Paragraph(
+        f"<b>Proyecto:</b> {texto(proyecto.nombre)}",
+        estilos["Normal"],
+    ))
+    elementos.append(Paragraph(
+        f"<b>ID:</b> {proyecto.id}",
+        estilos["Normal"],
+    ))
+    elementos.append(Paragraph(
+        f"<b>Descripción:</b> {texto(proyecto.descripcion)}",
+        estilos["Normal"],
+    ))
+    elementos.append(Paragraph(
+        f"<b>Fecha de inicio:</b> {fecha(proyecto.fecha_inicio)}",
+        estilos["Normal"],
+    ))
+    elementos.append(Paragraph(
+        f"<b>Fecha de finalización:</b> {fecha(proyecto.fecha_fin)}",
+        estilos["Normal"],
+    ))
+    elementos.append(Paragraph(
+        f"<b>Informe generado:</b> "
+        f"{datetime.now().strftime('%d/%m/%Y %H:%M')}",
+        estilos["Normal"],
+    ))
+    elementos.append(Spacer(1, 18))
+
+
+    # DATOS DEL CONTRATISTA Y DEL CONTRATO
+    elementos.append(Paragraph(
+        "DATOS DEL CONTRATISTA Y DEL CONTRATO",
+        estilos["Heading2"],
+    ))
+
+    agregar_tabla(
+        ["Campo", "Información"],
+        [
+            ["Contratista", proyecto.contratista_nombre],
+            ["NIT", proyecto.contratista_nit],
+            ["Representante legal", proyecto.contratista_representante],
+            ["Teléfono", proyecto.contratista_telefono],
+            ["Correo electrónico", proyecto.contratista_correo],
+            ["Fecha de firma del contrato",
+             fecha(proyecto.fecha_firma_contrato)],
+            ["Duración del contrato (días)",
+             proyecto.duracion_contrato_dias],
+            ["Fecha del acta de inicio",
+             fecha(proyecto.fecha_acta_inicio)],
+            ["Archivo del contrato",
+             proyecto.contrato_archivo],
+            ["Archivo del acta de inicio",
+             proyecto.acta_inicio_archivo],
+        ],
+    )
+
+    elementos.append(Paragraph(
+        f"ACTIVIDADES Y TAREAS ({len(tareas)})",
+        estilos["Heading2"],
+    ))
+
+
+    if tareas:
+        agregar_tabla(
+            [
+                "Actividad",
+                "Tipo",
+                "Inicio planificado",
+                "Fin planificado",
+                "Inicio real",
+                "Fin real",
+                "Duración (días)",
+                "Avance (%)",
+                "Valor",
+            ],
+            [
+                [
+                    tarea.nombre,
+                    tarea.tipo,
+                    fecha(tarea.fecha_inicio),
+                    fecha(tarea.fecha_fin),
+                    fecha(tarea.fecha_inicio_real),
+                    fecha(tarea.fecha_fin_real),
+                    tarea.duracion_dias,
+                    tarea.porcentaje_completado,
+                    tarea.valor_total,
+                ]
+                for tarea in tareas
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay actividades registradas.",
+            estilos["Normal"],
+        ))
+        elementos.append(Spacer(1, 12))
+
+    elementos.append(Paragraph(
+        f"DOCUMENTOS REGISTRADOS ({len(documentos)})",
+        estilos["Heading2"],
+    ))
+
+    if documentos:
+        agregar_tabla(
+            ["Tipo", "Descripción", "Fecha", "Valor"],
+            [
+                [
+                    documento.tipo,
+                    documento.descripcion,
+                    fecha(documento.fecha),
+                    documento.valor,
+                ]
+                for documento in documentos
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay documentos registrados en este módulo.",
+            estilos["Normal"],
+        ))
+        elementos.append(Spacer(1, 12))
+
+    elementos.append(Paragraph(
+        f"PÓLIZAS ({len(polizas)})",
+        estilos["Heading2"],
+    ))
+
+    if polizas:
+        agregar_tabla(
+            ["Tipo", "Aseguradora", "Inicio", "Vencimiento"],
+            [
+                [
+                    poliza.tipo_poliza,
+                    poliza.aseguradora,
+                    fecha(poliza.fecha_inicio),
+                    fecha(poliza.fecha_fin),
+                ]
+                for poliza in polizas
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay pólizas registradas.",
+            estilos["Normal"],
+        ))
+
+
+    # ACTAS DE COMITÉ
+    elementos.append(Paragraph(
+        f"ACTAS DE COMITÉ ({len(comites)})",
+        estilos["Heading2"],
+    ))
+
+    if comites:
+        agregar_tabla(
+            ["Fecha", "Título", "Documento"],
+            [
+                [
+                    fecha(comite.fecha),
+                    comite.titulo,
+                    comite.documento,
+                ]
+                for comite in comites
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay actas de comité registradas.",
+            estilos["Normal"],
+        ))
+        elementos.append(Spacer(1, 12))
+
+    # INFORMES DE COMITÉ
+    elementos.append(Paragraph(
+        f"INFORMES DE COMITÉ ({len(informes_comite)})",
+        estilos["Heading2"],
+    ))
+
+    if informes_comite:
+        agregar_tabla(
+            ["Fecha", "Título", "Documento"],
+            [
+                [
+                    fecha(informe.fecha),
+                    informe.titulo,
+                    informe.documento,
+                ]
+                for informe in informes_comite
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay informes de comité registrados.",
+            estilos["Normal"],
+        ))
+        elementos.append(Spacer(1, 12))
+
+    # BITÁCORA DEL PROYECTO
+    elementos.append(Paragraph(
+        f"BITÁCORA DEL PROYECTO ({len(bitacoras)})",
+        estilos["Heading2"],
+    ))
+
+    if bitacoras:
+        agregar_tabla(
+            ["Fecha", "Personal", "Actividades", "Observaciones"],
+            [
+                [
+                    fecha(bitacora.fecha),
+                    bitacora.personal,
+                    bitacora.actividades,
+                    bitacora.observaciones,
+                ]
+                for bitacora in bitacoras
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay registros en la bitácora.",
+            estilos["Normal"],
+        ))
+        elementos.append(Spacer(1, 12))
+
+
+    # ANTICIPOS
+    elementos.append(Paragraph(
+        f"ANTICIPOS ({len(anticipos)})",
+        estilos["Heading2"],
+    ))
+
+    if anticipos:
+        agregar_tabla(
+            ["Fecha", "Porcentaje (%)", "Valor"],
+            [
+                [
+                    fecha(anticipo.fecha),
+                    anticipo.porcentaje,
+                    anticipo.valor,
+                ]
+                for anticipo in anticipos
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay anticipos registrados.",
+            estilos["Normal"],
+        ))
+        elementos.append(Spacer(1, 12))
+
+    # CORTES DE OBRA
+    elementos.append(Paragraph(
+        f"CORTES DE OBRA ({len(cortes)})",
+        estilos["Heading2"],
+    ))
+
+    if cortes:
+        agregar_tabla(
+            ["Número de corte", "Fecha", "Porcentaje (%)"],
+            [
+                [
+                    corte.numero_corte,
+                    fecha(corte.fecha),
+                    corte.porcentaje,
+                ]
+                for corte in cortes
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay cortes de obra registrados.",
+            estilos["Normal"],
+        ))
+        elementos.append(Spacer(1, 12))
+
+    # CORTES DE COSTOS
+    elementos.append(Paragraph(
+        f"CORTES DE COSTOS ({len(cortes_costos)})",
+        estilos["Heading2"],
+    ))
+
+    if cortes_costos:
+        agregar_tabla(
+            ["Número de corte", "Porcentaje (%)", "Valor"],
+            [
+                [
+                    corte.numero_corte,
+                    corte.porcentaje,
+                    corte.valor,
+                ]
+                for corte in cortes_costos
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay cortes de costos registrados.",
+            estilos["Normal"],
+        ))
+        elementos.append(Spacer(1, 12))
+
+
+    # PQR DEL PROYECTO
+    elementos.append(Paragraph(
+        f"PQR DEL PROYECTO ({len(pqrs)})",
+        estilos["Heading2"],
+    ))
+
+    if pqrs:
+        agregar_tabla(
+            [
+                "Fecha requerimiento",
+                "Problema",
+                "Solución",
+                "Ubicación",
+                "Fecha solución",
+                "Estado",
+                "Observaciones",
+            ],
+            [
+                [
+                    fecha(pqr.fecha_requerimiento),
+                    pqr.problema,
+                    pqr.solucion,
+                    pqr.ubicacion,
+                    fecha(pqr.fecha_solucion),
+                    pqr.estado,
+                    pqr.observacion,
+                ]
+                for pqr in pqrs
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay PQR registradas.",
+            estilos["Normal"],
+        ))
+        elementos.append(Spacer(1, 12))
+
+    # TORRES Y APARTAMENTOS
+    elementos.append(Paragraph(
+        f"TORRES Y APARTAMENTOS ({len(torres)})",
+        estilos["Heading2"],
+    ))
+
+    if torres:
+        agregar_tabla(
+            [
+                "Torre",
+                "Cantidad de apartamentos",
+                "Apartamentos entregados",
+                "Observaciones",
+            ],
+            [
+                [
+                    torre.nombre_torre,
+                    torre.cantidad_apartamentos,
+                    torre.apartamentos_entregados,
+                    torre.observaciones,
+                ]
+                for torre in torres
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay torres registradas.",
+            estilos["Normal"],
+        ))
+        elementos.append(Spacer(1, 12))
+
+    # REGISTRO DE LLUVIAS
+    elementos.append(Paragraph(
+        f"REGISTRO DE LLUVIAS ({len(lluvias)})",
+        estilos["Heading2"],
+    ))
+
+    if lluvias:
+        agregar_tabla(
+            ["Fecha", "Hora de inicio", "Hora de fin", "Observación"],
+            [
+                [
+                    fecha(lluvia.fecha),
+                    lluvia.hora_inicio,
+                    lluvia.hora_fin,
+                    lluvia.observacion,
+                ]
+                for lluvia in lluvias
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay registros de lluvias.",
+            estilos["Normal"],
+        ))
+        elementos.append(Spacer(1, 12))
+
+    # MEMORIAS DE CÁLCULO
+    elementos.append(Paragraph(
+        f"MEMORIAS DE CÁLCULO ({len(memorias)})",
+        estilos["Heading2"],
+    ))
+
+    if memorias:
+        agregar_tabla(
+            ["Fecha", "Título", "Documento"],
+            [
+                [
+                    fecha(memoria.fecha),
+                    memoria.titulo,
+                    memoria.documento,
+                ]
+                for memoria in memorias
+            ],
+        )
+    else:
+        elementos.append(Paragraph(
+            "No hay memorias de cálculo registradas.",
+            estilos["Normal"],
+        ))
+        elementos.append(Spacer(1, 12))
+
+    pdf.build(elementos)
+    buffer.seek(0)
+
+    from fastapi.responses import StreamingResponse
+
+    nombre_pdf = f"resumen_proyecto_{proyecto.id}.pdf"
+
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="{nombre_pdf}"'
+        },
     )

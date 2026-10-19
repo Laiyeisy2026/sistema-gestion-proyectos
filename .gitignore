@@ -4,3 +4,9 @@ __pycache__/
 .env
 test_db
 Tema_Empresarial_Negro_Amarillo
+# Archivos locales y respaldos
+uploads/
+*.dump
+*.backup
+*.zip
+static/proyectos/

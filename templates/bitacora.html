@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Bitácora{% endblock %}
+
+{% block content %}
+
+<div class="pqr-card" style="max-width:1200px;">
+
+    <div style="text-align:center; margin-bottom:25px;">
+        <h2 style="margin:0; font-weight:600;">📋 Bitácora del proyecto</h2>
+        <div style="width:60px;height:4px;background:#6b7280;
+                    margin:8px auto 0;border-radius:4px;"></div>
+    </div>
+
+    <hr style="margin:20px 0;">
+
+    <h3>Nuevo registro</h3>
+
+    <form method="post"
+          action="/proyectos/{{ proyecto.id }}/bitacora/nueva"
+          style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;">
+
+        <div>
+            <label>Fecha</label>
+            <input type="date" name="fecha" value="{{ hoy }}" required
+                   style="width:100%;box-sizing:border-box;">
+        </div>
+
+        <div>
+            <label>Personal</label>
+            <select name="personal" required
+                    style="width:100%;box-sizing:border-box;">
+                <option value="">Seleccionar</option>
+                <option value="Administrativo">Administrativo</option>
+                <option value="Operativo">Operativo</option>
+            </select>
+        </div>
+
+        <div style="grid-column:1/-1;">
+            <label>Actividades</label>
+            <textarea name="actividades" required rows="3"
+                      placeholder="Describe las actividades realizadas"
+                      style="width:100%;box-sizing:border-box;"></textarea>
+        </div>
+
+        <div style="grid-column:1/-1;">
+            <label>Observaciones</label>
+            <textarea name="observaciones" rows="2"
+                      placeholder="Observaciones adicionales"
+                      style="width:100%;box-sizing:border-box;"></textarea>
+        </div>
+
+        <div>
+            <button type="submit" class="btn btn-guardar">
+                💾 Guardar registro
+            </button>
+        </div>
+    </form>
+
+    <hr style="margin:25px 0;">
+
+    <h3>Registros de bitácora</h3>
+
+    <div style="overflow-x:auto;">
+        <table class="tabla" style="width:100%;">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Personal</th>
+                    <th>Actividades</th>
+                    <th>Observaciones</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for r in registros %}
+                <tr>
+                    <td>{{ r.fecha.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ r.personal }}</td>
+                    <td style="white-space:pre-wrap;">{{ r.actividades }}</td>
+                    <td style="white-space:pre-wrap;">{{ r.observaciones or '—' }}</td>
+                    <td>
+                        <form method="post"
+                              action="/proyectos/{{ proyecto.id }}/bitacora/eliminar/{{ r.id }}"
+                              onsubmit="return confirm('¿Eliminar este registro de bitácora?');">
+                            <button type="submit" class="btn btn-eliminar">
+                                🗑 Eliminar
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align:center;">
+                        No hay registros en la bitácora.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+{% endblock %}

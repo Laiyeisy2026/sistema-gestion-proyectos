@@ -29,9 +29,20 @@
         <h3>{{ proyecto.nombre }}</h3>
         <p>{{ proyecto.descripcion }}</p>
 
-        <a href="/proyectos/{{ proyecto.id }}" class="btn btn-entrar">
-            🚀 Entrar
-        </a>
+
+<div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+
+    <a href="/proyectos/{{ proyecto.id }}" class="btn btn-entrar">
+        🚀 Entrar
+    </a>
+
+    <a href="/proyectos/{{ proyecto.id }}/resumen/pdf"
+       class="btn btn-generar-pdf"
+       style="background-color: #16834a; color: white;">
+        📄 Generar PDF
+    </a>
+
+</div>
 
     </div>
     {% endfor %}

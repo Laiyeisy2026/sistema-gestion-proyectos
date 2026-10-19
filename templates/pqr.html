@@ -70,6 +70,13 @@
                 placeholder="Ej: Torre A – Piso 3"
             >
 
+            <label>Observación</label>
+            <textarea
+                name="observacion"
+                rows="3"
+                {% if solo_lectura %}disabled{% endif %}
+                placeholder="Ingrese las observaciones adicionales">{{ pqr_editando.observacion if pqr_editando else '' }}</textarea>
+
             <label>Fecha de solución</label>
             <input
                 type="date"
@@ -82,7 +89,7 @@
             <div class="acciones-form">
                 <button type="submit" class="btn btn-guardar">
                     {% if pqr_editando %}
-                        ✅ Guardar solución
+                        ✅ Guardar
                     {% else %}
                         💾 Guardar PQR
                     {% endif %}
@@ -104,6 +111,7 @@
             <tr>
                 <th>Fecha</th>
                 <th>Problema</th>
+                <th>Observación</th>
                 <th>Ubicación</th>
                 <th>Estado</th>
                 <th>Fecha solución</th>
@@ -117,6 +125,7 @@
                     {{ pqr.fecha_requerimiento }}
                 </td>
                 <td>{{ pqr.problema }}</td>
+                <td style="white-space:pre-wrap;">{{ pqr.observacion or "—" }}</td>
                 <td>{{ pqr.ubicacion or "—" }}</td>
                 <td style="white-space:nowrap;">
     {% if pqr.estado == "cerrado" %}
@@ -166,7 +175,7 @@
             </tr>
             {% else %}
             <tr>
-                <td colspan="6" style="text-align:center;">
+                <td colspan="7" style="text-align:center;">
                     No hay PQR registrados
                 </td>
             </tr>

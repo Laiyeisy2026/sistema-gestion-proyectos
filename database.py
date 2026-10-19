@@ -1,14 +1,12 @@
 import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
+load_dotenv()
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# fallback SOLO para local
-if not DATABASE_URL:
-    DATABASE_URL = "postgresql://postgres:Postgres1234@localhost:5432/railway"
-
-# 🔥 IMPORTANTE: NO forzar sslmode en Railway
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True
