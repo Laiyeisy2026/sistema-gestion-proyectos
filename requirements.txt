@@ -63,3 +63,4 @@ websockets==15.0.1
 yarl==1.22.0
 python-dotenv
 sendgrid>=6.10.0
+reportlab
